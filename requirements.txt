@@ -1,0 +1,5 @@
+mkdocs
+mkdocs_section_index
+mkdocs_literate_nav
+mkdocs-material
+mkdocs-gallery

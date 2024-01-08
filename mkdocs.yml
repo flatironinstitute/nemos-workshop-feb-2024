@@ -1,0 +1,34 @@
+site_name: "Nemos workshop, Feb 2024"
+repo_url: https://github.com/flatironinstitute/nemos-workshop-feb-2024
+
+theme:
+  name: 'material'
+  features:
+   - navigation.expand
+   - navigation.top
+  palette:
+    primary: 'light blue'                   # The primary color palette for the theme
+
+plugins:
+    - search
+    - literate-nav:
+          nav_file: docs/SUMMARY.md     # navigation file for literate navigation
+    - section-index                    # plugin for creating section index
+    - gallery:
+          conf_script: docs/gallery_conf.py
+          # path to the directory containing our examples/tutorials
+          examples_dirs: docs/examples
+          # path to the directory where mkdocs will save the generated output
+          gallery_dirs: docs/generated/gallery
+
+extra_javascript:
+  - javascripts/katex.js
+  - https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.7/katex.min.js
+  - https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.7/contrib/auto-render.min.js
+
+extra_css:
+  - https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.7/katex.min.css
+
+nav:
+    - Home: index.md
+    - Tutorials: generated/gallery

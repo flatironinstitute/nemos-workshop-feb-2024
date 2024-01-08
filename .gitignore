@@ -158,3 +158,22 @@ cython_debug/
 #  and can be added to the global gitignore or merged into this file.  For a more nuclear
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
+
+
+# PyCharm project specs
+.idea/
+
+
+# IntelliJ's project specific settings
+.idea/
+
+.DS_Store
+
+# mkdocs generated folder
+docs/generated/
+
+# vscode
+.vscode/
+
+# nwb cahce
+nwb-cache/
