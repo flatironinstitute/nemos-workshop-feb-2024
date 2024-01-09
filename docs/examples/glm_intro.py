@@ -4,7 +4,7 @@ r"""
 !!! warning
     Some literature uses GLM to refer General Linear Models.
     This model class is different from the Generaliz**ed** linear models defined here; The former are linear Gaussian
-    models, the latter are non-linear models.
+    models, the latter are non-linear models as defined in [REF].
 
 A Generalized Linear Model (GLM) is as a statistical model that maps some inputs
 $\bm{X}$ (i.e. auditory or visual stimuli, injected current, the activity of neighboring neurons...)
