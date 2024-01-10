@@ -87,6 +87,10 @@ Our dataset consists of a whole cell current clamp recordings of an individual n
 The neuron is stimulated with an injected current that follows a varieties of protocols: short and long square waves,
 ramps, withe noise, impulses.
 
+The variable we are going to be working with will be the following:
+ - trial_interval_set: a dictionary containing the start and end time of each trial in second. Dictionary keys
+ will refer to the stimulation protocol used for the trial
+
 The start and end of each trial in seconds is stored in a pynapple IntervaSet object.
 Metadata about each trial (including the stimulation protocol used) will be stored in the `sweep_metadata` dictionary.
 Spike times will be stored as a pynapple Ts (time series) object.
@@ -103,18 +107,19 @@ from utils.load_allen_utils import load_to_pynapple
  spike_times,
  sweep_metadata) = load_to_pynapple("/Users/ebalzani/Code/fit_from_allensdk/cell_types/specimen_478498617/ephys.nwb")
 
-# print the metadata for a trial
-trial_id = 49
-print(f"Trial {trial_id} metadata")
-for key, values in sweep_metadata[trial_id].items():
+# metadata for a trial
+stim_type = "Noise 2"
+sweep_num = 49
+print(f"Stimulation protocol: {stim_type}\nTrial: {sweep_num}")
+for key, values in sweep_metadata[stim_type][sweep_num].items():
     print(f"\t - {key}: {values}")
 
-# plot the trial
-idx_interval = sweep_metadata[trial_id]["interval_set_index"]
-trial_interval = trial_interval_set[idx_interval: idx_interval+1]
+# # plot the trial
+trial_index = sweep_metadata[stim_type][sweep_num]["trial_index"]
+trial_interval = trial_interval_set[stim_type][trial_index: trial_index+1]
 binned_current = injected_current.bin_average(bin_size=0.001, ep=trial_interval) * 10**12
 plt.figure()
-plt.title(f"Trial {trial_id}")
+plt.title(f"Sweep {sweep_num} - {stim_type}")
 plt.plot(binned_current, label="injected current")
 plt.vlines(spike_times[1].restrict(trial_interval).t, 0, 0.1 * np.max(binned_current), 'k', label="spikes")
 plt.legend()

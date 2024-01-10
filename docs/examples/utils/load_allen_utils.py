@@ -193,14 +193,14 @@ def get_spike_times(sweep_number, fh, key="spike_times"):
 
 
 def load_to_pynapple(path: str, shift_trials_by_sec: float = 5.)\
-        -> Tuple[nap.IntervalSet, nap.Tsd, nap.Tsd, nap.TsGroup, dict]:
+        -> Tuple[dict, nap.Tsd, nap.Tsd, nap.TsGroup, dict]:
     """
     Load the intracellular recording as pynapple time series.
 
     Parameters
     ----------
-    specimen_id:
-        The id of the specimen as in the allen brain map experiment.
+    path:
+        The path to the specimen data as in the allen brain map experiment.
 
         https://celltypes.brain-map.org/experiment/electrophysiology/
     shift_trials_by_sec:
@@ -237,22 +237,30 @@ def load_to_pynapple(path: str, shift_trials_by_sec: float = 5.)\
         voltage_trials = []
         spike_times = []
         time_trials = []
-        starts = []
-        ends = []
+        starts = {}
+        ends = {}
+        trial_index = {}
         for cc, num in enumerate(sweap_nums):
             # get the data for a specific trial
             dat = get_sweep(num, fh)
-            sweep_metadata[num] = get_sweep_metadata(num, fh)
+            metadata_dict = get_sweep_metadata(num, fh)
 
+            trial_type = metadata_dict['aibs_stimulus_name'].decode()
+            if trial_type not in sweep_metadata:
+                sweep_metadata[trial_type] = {}
+                trial_index[trial_type] = 0
             # append metadata information
-            sweep_metadata[num].update(
+            metadata_dict.update(
                 {
                     "stimulus_unit": dat["stimulus_unit"],
                     "sampling_rate": dat["sampling_rate"],
                     "response_unit": "Volt",
-                    "interval_set_index": cc
+                    "trial_index": trial_index[trial_type]
                 }
             )
+
+            sweep_metadata[trial_type][num] = metadata_dict
+            trial_index[trial_type] += 1
 
             # compute the time index for the trial by dividing the number of
             # samples by the sampling rate and adding a time shift that
@@ -268,24 +276,40 @@ def load_to_pynapple(path: str, shift_trials_by_sec: float = 5.)\
             stim_trials.append(dat["stimulus"])
 
             # store the first and last timestamp of each trial
-            starts.append(time_trials[-1][0])
-            ends.append(time_trials[-1][-1])
+
+            if trial_type not in starts.keys():
+                starts[trial_type] = []
+                ends[trial_type] = []
+
+            starts[trial_type].append(time_trials[-1][0])
+            ends[trial_type].append(time_trials[-1][-1])
 
             # compute the next time shift
             init_trial_time = shift_trials_by_sec + time_trials[-1][-1]
 
         # define the pynapple objects
-        trial_interval_set = nap.IntervalSet(start=starts, end=ends)
+        trial_interval_set = {key: nap.IntervalSet(start=starts[key], end=ends[key]) for key in starts}
+        time_support = interval_set_union(*trial_interval_set.values())
         spike_times = nap.TsGroup(
-            {1: nap.Ts(t=np.hstack(spike_times))}, time_support=trial_interval_set
+            {1: nap.Ts(t=np.hstack(spike_times))}, time_support=time_support
         )
         voltages = nap.Tsd(
             t=np.hstack(time_trials),
             d=np.hstack(voltage_trials),
-            time_support=trial_interval_set,
+            time_support=time_support,
         )
         stim_trials = nap.Tsd(
-            t=voltages.t, d=np.hstack(stim_trials), time_support=trial_interval_set
+            t=voltages.t, d=np.hstack(stim_trials), time_support=time_support
         )
 
         return trial_interval_set, stim_trials, voltages, spike_times, sweep_metadata
+
+
+def interval_set_union(*interval_sets):
+    starts = np.concatenate([iset.starts.t for iset in interval_sets])
+    ends = np.concatenate([iset.ends.t for iset in interval_sets])
+    sortidx = np.argsort(starts)
+    starts = starts[sortidx]
+    ends = ends[sortidx]
+    return nap.IntervalSet(starts, ends)
+
