@@ -88,8 +88,14 @@ The neuron is stimulated with an injected current that follows a varieties of pr
 ramps, withe noise, impulses.
 
 The variable we are going to be working with will be the following:
- - trial_interval_set: a dictionary containing the start and end time of each trial in second. Dictionary keys
- will refer to the stimulation protocol used for the trial
+ - trial_interval_set: a dictionary containing the start and end time of each trial in second as a
+ pynapple.IntervalSet object. Dictionary keys will refer to the stimulation protocol used for the trial.
+ - injected current: the trace of the injected current as a pynapple.Tsd object.
+ - response: the membrane voltage of the neuron in response to the current as a pynapple.Tsd object.
+ - spike_times: the spike times of the neuron as a pynapple.TsGroup object
+ - sweep_metadata: a nested dictionary containing information about the trial. The first level key will be
+ the stimulation protocol, the second the sweep number, the third key is the metadata label
+
 
 The start and end of each trial in seconds is stored in a pynapple IntervaSet object.
 Metadata about each trial (including the stimulation protocol used) will be stored in the `sweep_metadata` dictionary.
@@ -99,6 +105,7 @@ Spike times will be stored as a pynapple Ts (time series) object.
 import numpy as np
 import matplotlib.pyplot as plt
 from utils.load_allen_utils import load_to_pynapple
+import pynapple as nap
 
 # load the data
 (trial_interval_set,
@@ -107,17 +114,29 @@ from utils.load_allen_utils import load_to_pynapple
  spike_times,
  sweep_metadata) = load_to_pynapple("/Users/ebalzani/Code/fit_from_allensdk/cell_types/specimen_478498617/ephys.nwb")
 
-# metadata for a trial
-stim_type = "Noise 2"
-sweep_num = 49
+
+
+# %%
+# Before digging into the GLM setup we can explore the activity during the recording. As a first step
+# we can select a trial from the white noise stimulation protocol and plot the activity overlapped to the
+# injected current.
+# We will make use of the pynapple "bin_average" method to up-sample the current time series from
+# a 20KHz to a more manageable 1KHz.
+
+# Print the metadata
+stim_type = "Noise 1"
+sweep_num = 50
 print(f"Stimulation protocol: {stim_type}\nTrial: {sweep_num}")
 for key, values in sweep_metadata[stim_type][sweep_num].items():
     print(f"\t - {key}: {values}")
 
-# # plot the trial
+# get the IntervalSet from the metadata "trial_index";
 trial_index = sweep_metadata[stim_type][sweep_num]["trial_index"]
 trial_interval = trial_interval_set[stim_type][trial_index: trial_index+1]
+# up-sample the current and convert to from A to pA
 binned_current = injected_current.bin_average(bin_size=0.001, ep=trial_interval) * 10**12
+
+# plot the trial
 plt.figure()
 plt.title(f"Sweep {sweep_num} - {stim_type}")
 plt.plot(binned_current, label="injected current")
@@ -128,11 +147,10 @@ plt.ylabel('current [pA]', fontsize=10)
 plt.tight_layout()
 
 # %%
-# We can plot the explore our dataset recording by plotting the time-course of the current injection
-# overlapped to the evoked spikes.
+# Next we can visualize the whole dataset to get a better sense of what stimulation protocols were
+# applied, and how the neuron responded to the stimulation.
 
-# bin the injected current at 1ms resolution
-# and convert from Ampere to pico-Ampere
+# up-sample and rescale to pA
 binned_current = injected_current.bin_average(bin_size=0.001) * 10**12
 
 fig, ax = plt.subplots(figsize=(10, 3.5))
@@ -153,6 +171,24 @@ plt.xlabel('time [sec]', fontsize=10)
 plt.ylabel('current [pA]', fontsize=10)
 plt.legend()
 plt.tight_layout()
+
+# %%
+# We can use pynapple to extract the tuning function of the neuron to the injected current during the
+# noise stimulation protocol.
+
+# compute and plot the tuning curve with pynapple
+tuning = nap.compute_1d_tuning_curves(
+    spike_times,
+    injected_current * 10**12,
+    ep=trial_interval_set["Noise 1"],
+    nb_bins=20,
+    minmax=(0, 200)
+)
+plt.figure()
+plt.title("tuning curve")
+plt.plot(tuning)
+plt.ylabel("firing rate [Hz]")
+plt.xlabel("current [pA]")
 
 # %%
 # *Work out minimal example of a poisson glm for predicting counts given an injected current.*
