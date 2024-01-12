@@ -33,10 +33,16 @@ non-linearity that converts the weighted sum of the input into rates.
 Below an implementation of eqn (1),
 """
 
-import jax.numpy as jnp
-
-from numpy.typing import NDArray
 from typing import Callable
+
+import jax
+import jax.numpy as jnp
+import jaxopt
+import matplotlib.pyplot as plt
+import nemos as nmo
+import numpy as np
+from jax.scipy.special import gammaln
+from numpy.typing import NDArray
 
 
 # define a function for computing the rate
@@ -124,8 +130,6 @@ def compute_rate(weights: NDArray, x: NDArray, non_linearity: Callable=jnp.exp):
 # [here](#learning-the-glm-weights-by-maximum-likelihood-ml), we will implement a function for computing the logarithm
 # of the likelihood, i.e. the log-likelihood.
 
-from jax.scipy.special import gammaln
-
 def poisson_log_likelihood(weights: NDArray, x: NDArray, y: NDArray, rate_func: Callable):
     """
 
@@ -153,9 +157,6 @@ def poisson_log_likelihood(weights: NDArray, x: NDArray, y: NDArray, rate_func: 
 # To make things more concrete, let's immagine to model the rate of a neuron in response to the visual
 # contrast of an image. Assume that input contrast is a one-dimensional array that assumes values between 0 and 1.
 # Plot the rate as a function of the weights for a range of values.
-
-import numpy as np
-import matplotlib.pyplot as plt
 
 np.random.seed(123)
 # generate 100 sample of random contrasts
@@ -265,8 +266,6 @@ plt.xlabel("weight")
 # by standard methods (gradient descent, Newton and quasi-Newton methods).
 # Here we will show how to solve for the ML parameters using GradientDescent `jaxopt`, which computes the
 # gradient of the likelihood for us through auto-differentiation.
-import jax
-import jaxopt
 
 # enable float64
 jax.config.update("jax_enable_x64", True)
@@ -333,10 +332,10 @@ plt.xlabel("number of samples")
 # %%
 # ## Fit with NeMoS
 # NeMoS implements of the Poisson-GLM abstract away all the details. The default non-linearity is exponential
-# and one can fit the GLM for the section before with the following lines of code
+# and one can fit the GLM for the section before with the following lines of code.
 
-import nemos as nmo
-
+# to get an ML estimate, set unregularized
+# otherwise the default would assume a Ridge regularization
 model = nmo.glm.GLM(regularizer=nmo.regularizer.UnRegularized("BFGS", dict(tol=10**-12)))
 # the input must be of shape (n_samples, n_neurons, n_features)
 # the counts must be of shape (n_samples, n_neurons)

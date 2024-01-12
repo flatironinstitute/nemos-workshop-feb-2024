@@ -1,6 +1,5 @@
 """
-
-## GLM in practice: Analysis of An Intracellular Recording
+# GLM in practice: Analysis of An Intracellular Recording
 After understanding the basics of GLMs, let's see how we can apply these concepts in a real-world example.
 In this tutorial, we will load, explore, and model an intracellular recording from the Allen Cell Type.
 
@@ -19,6 +18,7 @@ The variables we will be working with are:
  - **spike_times**: The spike times of the neuron as a `pynapple.TsGroup` object.
  - **sweep_metadata**: A nested dictionary containing information about the trial. The first level key will be
  the stimulation protocol, the second the sweep number, the third the metadata label.
+"""
 
 from utils.load_allen_utils import load_to_pynapple
 import pynapple as nap
@@ -61,6 +61,9 @@ for key, values in sweep_metadata[stim_type][sweep_num].items():
 # a 200KHz to a more manageable 1KHz.
 #
 # #### A Single Trial
+
+import matplotlib.pyplot as plt
+import numpy as np
 
 # get the IntervalSet from the metadata "trial_index";
 trial_index = sweep_metadata[stim_type][sweep_num]["trial_index"]
@@ -127,7 +130,6 @@ plt.xlabel("current [pA]")
 
 # %%
 # ### Setting-up the Poisson GLM
-# *Code up the likelihood from scratch and then compare with nemos*
 #
 # *Predict using the instantaneous injected current.*
 #
@@ -145,4 +147,3 @@ plt.xlabel("current [pA]")
 # ### A better parametrization
 #
 # ### Can we do better? Model Self-Excitation
-"""
