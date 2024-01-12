@@ -5,3 +5,4 @@ mkdocs-material
 mkdocs-gallery
 pynapple
 h5py
+nemos
