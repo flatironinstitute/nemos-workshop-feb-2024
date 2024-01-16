@@ -9,4 +9,5 @@ h5py
 jax
 jaxopt
 matplotlib
+dandi
 git+https://github.com/flatironinstitute/nemos.git
