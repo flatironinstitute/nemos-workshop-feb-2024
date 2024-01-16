@@ -6,4 +6,7 @@ mkdocs-gallery
 pillow
 pynapple
 h5py
+jax
+jaxopt
+matplotlib
 git+https://github.com/flatironinstitute/nemos.git
