@@ -21,35 +21,35 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # Build job
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v3
         with:
           submodules: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'  # Specify your Python version
+
       - name: Setup Pages
         uses: actions/configure-pages@v3
-      - uses: actions/setup-python@v4
+
       - name: Install python dependencies
         run: |
           pip install -r requirements.txt
-      - name: Build website
+
+      - name: Build website with MkDocs
         # this is the directory where jekyll produces its output, and so where
         # github pages expects it to live
-        run: mkdocs build --site-dir ./_site
+        run: |
+          mkdocs build --site-dir ./_site
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v2
 
-  # Deployment job
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
       - name: Deploy to GitHub Pages
-        id: deployment
+        if: github.ref == 'refs/heads/main'
         uses: actions/deploy-pages@v2
