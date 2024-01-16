@@ -6,4 +6,4 @@ mkdocs-gallery
 pillow
 pynapple
 h5py
-nemos
+git+https://github.com/flatironinstitute/nemos.git
