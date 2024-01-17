@@ -180,3 +180,70 @@ fig
 # can get a little fancier by adding history. try with and without bases?
 #
 # then add self-excitatin
+
+# %%
+#
+# ## Basis introduction.
+#
+# We've seen what we can do with a super simple model, but how can we improve
+# it? Brainstorming possible inputs:
+#
+# - current at time t (currently done)
+# - spiking history
+# - current history
+# - more complicated function of current
+#
+# and any combination of the above
+#
+# How should we add something like spiking history? We could do the simple way:
+# treat time t, t-1, ... t-i, all as independent predictors, with a separate
+# weight on each one. That feels pretty weird -- that's a whole lot of weights
+# and it's odd to treat each of them as independent predictors.
+#
+# Instead, what is typically done in the GLM framework is to use a set of basis
+# functions. Why? Remember in tutorial 0: basis functions allow us to create a
+# relatively low-dimensional representation that captures relevant properties
+# of our feature while keeping the problem convex. that's pretty nifty.
+#
+# nemos includes `Basis` objects to handle the construction and use of these
+# basis functions.
+#
+# !!! info
+#
+#     We provide a handful of different choices for basis functions, and
+#     selecting the proper basis function for your input is an important
+#     analytical step. We will eventually provide guidance on this choice, but
+#     for now we'll give you a decent choice.
+#
+# ### History-related inputs
+# For history-type inputs, whether of the spiking history or of the current
+# history, we'll use the raised cosine log-stretched basis first described in
+# [Pillow et al., 2005](https://www.jneurosci.org/content/25/47/11003). This
+# basis set has the nice property that their precision drops linearly with
+# distance from event, which is a nice property for many history-related inputs
+# in neuroscience: whether an input happened 1 or 5 msec ago matters a lot,
+# whereas whether an input happened 51 or 55 msec ago is less important.
+#
+# When we instantiate this object, the only argument we need to specify is the
+# number of functions we want: with more basis functions, we'll be able to
+# represent the effect of the corresponding input with the higher precision, at
+# the cost of adding additional parameters.
+
+basis = nmo.basis.RaisedCosineBasisLog(10)
+
+# %%
+#
+# `basis.evaluate_on_grid` is a convenience method to view all basis functions
+# across their whole domain:
+time, basis_kernels = basis.evaluate_on_grid(250)
+plt.plot(time, basis_kernels)
+
+# %%
+#
+# For history-related inputs, we need to convolve them with the basis functions
+# in order to generate our inputs
+#
+# !!! warning
+#     WHYWHYWHY
+#
+#
