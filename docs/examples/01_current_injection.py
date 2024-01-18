@@ -322,10 +322,10 @@ plt.tight_layout()
 # %%
 # ### 3. The Poisson log-likelihood
 # The last component of the model is the poisson log-likelihood that quantifies how likely it is
-# to observe certain counts for a given firing rate.
+# to observe certain counts for a given firing rate time series.
 # The if $y(t)$ are the spike counts, the equation for the log-likelihood is
 # $$ \sum\_t \log P(y(t) | \lambda(t)) = \sum\_t  y(t) \log(\lambda(t)) - \lambda(t) - \log (y(t)!)\tag{2}$$
-# In nemos, the likelihood can be computed by calling the score method passing the predictors and the counts.
+# In nemos, the log-likelihood can be computed by calling the score method passing the predictors and the counts.
 # The method first compute the rate $\lambda(t)$ using (1) and then the likelihood using (2).
 
 log_likelihood_0 = model.score(input_feature, counts, score_type="log-likelihood")
