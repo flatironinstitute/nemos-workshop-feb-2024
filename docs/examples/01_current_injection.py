@@ -240,8 +240,8 @@ input_feature = nap.TsdTensor(t=input_feature.t, d=np.expand_dims(input_feature.
 counts = nap.TsdFrame(t=count.t, d=count.d, columns="count")
 
 # check that the dimensionality matches nemos expectation
-print(f"feature shape: {input_feature.shape}")
 print(f"count shape: {count.shape}")
+print(f"current shape: {input_feature.shape}")
 
 # %%
 # ### 2. Linear-Non-Linear transformation of the current
