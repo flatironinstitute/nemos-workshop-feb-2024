@@ -128,33 +128,39 @@ plt.show()
 # %%
 # We will try to capture this behavior with our GLM model that models spike counts. To fit a GLM model, you need to count the spikes within a particular bin size. You can do the spike count in pynapple in one line.
 
-count = spikes.count(0.001, ep=noise_interval)
+# bin size in seconds
+bin_size = 0.001
+count = spikes.count(bin_size, ep=noise_interval)
 
 print(count)
 
 # %%
 # The GLM model is going to predict a firing rate. To be able to compare the output, we can compute the neuron firing rate. 
-firing_rate = count.smooth(50, 1000)/0.001
+firing_rate = count.smooth(50, 1000) / bin_size
 
 # %%
 # Let's plot the firing rate against the spike times.
 ex_interval = current.threshold(0.0).time_support.loc[[2]]
 #nap.IntervalSet(start=470.80, end=473.85)
 
-fig, ax = plt.subplots(3, 1, figsize=(12,6))
+fig, ax = plt.subplots(2, 3, figsize=(12,6))
 ax[0].plot(current, color = 'xkcd:banana')
 ax[0].set_ylabel("Current (pA)")
 ax[0].axvspan(ex_interval.loc[0,'start'], ex_interval.loc[0,'end'], alpha=0.2)
-ax[1].plot(firing_rate, color = 'xkcd:tomato')
-ax[1].plot(spikes.to_tsd([-1]), '|', color = 'xkcd:tomato', ms = 10)
+ax[1].plot(firing_rate, color = 'k')
+ax[1].plot(spikes.to_tsd([-1]), '|', color = 'k', ms = 10)
 ax[1].axvspan(ex_interval.loc[0,'start'], ex_interval.loc[0,'end'], alpha=0.2)
 ax[1].set_ylabel("Firing rate (Hz)")
-ax[2].plot(firing_rate.restrict(ex_interval), color = 'xkcd:tomato')
-ax[2].plot(spikes.restrict(ex_interval).to_tsd([-1]), '|', color = 'xkcd:tomato', ms = 10)
+ax[2].plot(firing_rate.restrict(ex_interval), color = 'k')
+ax[2].plot(spikes.restrict(ex_interval).to_tsd([-1]), '|', color = 'k', ms = 10)
 ax[2].set_xlabel("Time (s)")
 ax[2].set_ylabel("Firing rate (Hz)")
 plt.tight_layout()
 plt.show()
+
+
+# grid plot with first row current, second row response, third row subplots with resp (color match the
+# axis with the rectangles showing the simulations
 
 
 # %%
@@ -178,7 +184,7 @@ input_feature = nap.TsdFrame(t=current.t, d=current.d, columns = ['current'])
 # %%
 # First we need to downsample the input feature to match the time resolution of the binned spikes.
 # Here we use pynapple's function `bin_average` with the same time resolution.
-input_feature = input_feature.bin_average(0.001, ep = noise_interval)
+input_feature = input_feature.bin_average(bin_size, ep = noise_interval)
 
 # %%
 # Let's add an addional dimension. Nemos needs (num_time_pts, num_neurons, num_features)
@@ -196,10 +202,69 @@ print(count)
 glm = nmo.glm.GLM(regularizer=nmo.regularizer.UnRegularized())
 glm.fit(input_feature, count)
 
-# # Now that we've fit our data, let's see simulate to see what it looks like
-# pred_spikes, pred_fr = glm.simulate(jax.random.PRNGKey(4), binned_current)
-# # convert units from spikes/bin to spikes/sec
-# pred_fr /= bin_size
+# %%
+# Now that we've fit our data, we can use the model to predict the firing rates and
+# convert units from spikes/bin to spikes/sec
+predicted_fr = glm.predict(input_feature) / bin_size
+
+# let's reintroduce the time axis by defining a TsdFrame
+# convert first to numpy array otherwise to make it pynapple compatible
+predicted_fr = nap.TsdFrame(t=count.t, d=np.asarray(predicted_fr))
+smooth_predicted_fr = predicted_fr.smooth(50, 1000)
+
+# we can compare the model predicted rate with the observed one
+fig, ax = plt.subplots(3, 1, figsize=(12,6))
+ax[0].plot(current, color = 'xkcd:banana')
+ax[0].set_ylabel("Current (pA)")
+ax[0].axvspan(ex_interval.loc[0,'start'], ex_interval.loc[0,'end'], alpha=0.2)
+ax[1].plot(firing_rate, color = 'k')
+ax[1].plot(spikes.to_tsd([-1]), '|', color = 'k', ms = 10)
+ax[1].plot(smooth_predicted_fr, color="tomato", ls="--")
+ax[1].axvspan(ex_interval.loc[0,'start'], ex_interval.loc[0,'end'], alpha=0.2)
+ax[1].set_ylabel("Firing rate (Hz)")
+ax[2].plot(firing_rate.restrict(ex_interval), color = 'k')
+ax[2].plot(spikes.restrict(ex_interval).to_tsd([-1]), '|', color ='k', ms = 10)
+ax[2].plot(smooth_predicted_fr.restrict(ex_interval), color="tomato", ls="--")
+ax[2].set_xlabel("Time (s)")
+ax[2].set_ylabel("Firing rate (Hz)")
+plt.tight_layout()
+plt.show()
+
+# same fig as above but with filtered model rates
+
+# We can compare the tuning curves
+tuning_curve_model = nap.compute_1d_tuning_curves_continuous(predicted_fr, current, 15)
+
+plt.figure()
+plt.plot(tuning_curve, "k", label="observed")
+plt.plot(tuning_curve_model, color="tomato", label="glm")
+plt.ylabel("Firing rate (Hz)")
+plt.xlabel("Current (pA)")
+plt.legend()
+
+# Input and predicted rate looks very similar, why?
+interval = nap.IntervalSet(start=471, end=472)
+fig, axs = plt.subplots(2, 1, figsize=(12, 6))
+
+axs[0].plot(current.restrict(interval), "k")
+axs[0].set_ylabel("Current (pA)")
+axs[1].plot(predicted_fr.restrict(interval), "tomato")
+axs[1].set_xlabel("Time (s)")
+axs[1].set_ylabel("Firing rate (Hz)")
+plt.tight_layout()
+
+
+# pass it through the log
+rate = np.exp(glm.coef_[0,0] * current + glm.intercept_[0]) / bin_size
+fig, ax = plt.subplots(1, 1, figsize=(12, 6))
+
+ax.plot(rate.restrict(interval), "b")
+ax.set_ylabel("Firing rate (Hz)")
+ax.plot(predicted_fr.restrict(interval), "tomato", ls="--")
+ax.set_xlabel("Time (s)")
+plt.tight_layout()
+
+
 # pred_fr = nap.TsdFrame(binned_current.t, np.array(pred_fr))
 # # get the times of these simulated spikes
 # pred_spike_times = binned_spikes[np.where(pred_spikes)].times()

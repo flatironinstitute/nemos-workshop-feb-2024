@@ -177,3 +177,6 @@ docs/generated/
 
 # nwb cahce
 nwb-cache/
+
+# nwb files
+*.nwb
