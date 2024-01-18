@@ -17,6 +17,7 @@ import nemos.glm
 import numpy as np
 import pynapple as nap
 import requests
+import scipy.stats
 import tqdm
 
 # required for second order methods (BFGS, Newton-CG)
@@ -124,8 +125,11 @@ print(tuning_curve)
 # %%
 # In this case tuning_curve is a pandas DataFrame where each column is a neuron (one neuron in this case) and each row is a bin over the feature. We can plot the tuning curve of the neuron.
 
-fig, ax = plt.subplots(1, 1, figsize=(12,4))
-ax.plot(tuning_curve, color="k")
+fig, ax = plt.subplots(1, 1)
+tc_idx = tuning_curve.index.to_numpy()
+tc_val = tuning_curve.values.flatten()
+width = tc_idx[1]-tc_idx[0]
+ax.bar(tc_idx, tc_val, width, facecolor="grey", edgecolor="k", label="observed", alpha=0.4)
 ax.set_xlabel("Current (pA)")
 ax.set_ylabel("Firing rate (Hz)")
 plt.show()
@@ -211,15 +215,9 @@ plt.tight_layout()
 # %%
 # In this most basic form, the model components will be the following:
 #
-# 1. The predictor and the observations, i.e. the injected current and the counts
-# 2. A liner-non-linear map that maps the predictor into a firing rate.
-# 3. The Poisson log-likelihood that quantifies how likely are the observed count for a given firing rate.
-#
-# Let's define and inspect one component at the time.
-#
 # ### 1. Predictor & Observations
-# The input current is now a Tsd object, of shape (num_time_pts, ) sampled at 20KHz, while counts
-# are binned at 1KHz (1ms bin size).
+# We are using the input current as a predictor. it is a Tsd object sampled at 20KHz, while counts
+# are sampled at 1KHz (1ms bin size).
 
 print(f"current shape: {current.shape}")
 print(f"current sampling rate: {current.rate/1000.} KHz")
@@ -228,13 +226,15 @@ print(f"\ncount shape: {count.shape}")
 print(f"count sampling rate: {count.rate/1000} KHz")
 
 # %%
-# As a first step, we should down-sample it to the resolution of the spike counts.
-# We can use the bin_average method from pynapple to achieve this.
+# Nemos requires predictors and counts to have the same number of samples.
+# We can achieve that by down-sampling our current to the spike counts resolution using the bin_average method from
+# pynapple.
 input_feature = current.bin_average(bin_size, ep=noise_interval)
 
-# Additional step, nemos requires predictors of shape (num_time_pts, num_neurons, num_features) and
-# counts of shape (num_time_pts, num_neurons). We are modeling
-# one neuron with one predictor. pynapple as a class called TsdFrame for 2-dimensional data and TsdTensor
+# %%
+# Secondly we have to appropriately expand our variable dimensions, because nemos requires features of
+# shape (num_time_pts, num_neurons, num_features) and counts of shape (num_time_pts, num_neurons).
+# We can expand the dimension of counts and feature using the pynapple TsdFrame for 2-dimensional data and TsdTensor
 # n-dimensnoal data, n > 2.
 
 input_feature = nap.TsdTensor(t=input_feature.t, d=np.expand_dims(input_feature.d, (1, 2)))
@@ -251,51 +251,64 @@ print(f"count shape: {count.shape}")
 # $$
 # L(i(t)) = w \cdot i(t) + c
 # $$
-# Then a non-linearity is applied to transform this quantity into a positive firing rate.
-# $$ r(t) = \exp (w \cdot i(t) + c) $$
-# Let's see how this linear-non-linear transformation is implemented in nemos.
-# First we need to define a model object.
 
-# this the defines the model object, ignore the regularizer for now, more about it
-# in future tutorial, we are just changing the default.
-model = nmo.glm.GLM(regularizer=nmo.regularizer.UnRegularized(solver_name="LBFGS"))
+w = 0.05
+c = -2
+
+L = w * np.squeeze(input_feature) + c
+
+interval = nap.IntervalSet(start=471, end=471.5)
+plt.figure(figsize=(10, 3.5))
+ax = plt.subplot(1, 2, 1)
+ax.set_title("Current $i(t)$")
+ax.plot(np.squeeze(input_feature.restrict(interval)), color="grey")
+ax.set_xlabel("Time (s)")
+ax = plt.subplot(1, 2, 2)
+ax.set_title("Linearly Transformed $L(t)$")
+ax.plot(np.squeeze(L.restrict(interval)), color="orange")
+ax.set_xlabel("Time (s)")
+plt.tight_layout()
+# %%
+# Then a non-linearity is applied to transform this quantity into a positive firing rate.
+# $$ \lambda (t) = \exp (w \cdot i(t) + c) \tag{1}$$
+
+# apply an exponential non-linearity to L(t)
+predicted_rate = np.exp(L)
 
 # %%
-# Usually we would fit the weights and intercepts, but for this demonstration we hard code them
-# In nemos weights are (num_neurons, num_features) and intercepts (num_neurons,)
-w = np.atleast_2d(0.05)
-c = np.atleast_1d(-2)
+# The same linear-non-linear transformation is implemented by the `predict` method of the nemos.glm.GLM
+# object.
 
-model.coef_ = w
-model.intercept_ = c
+# First we need to define a model object: default likelihood is poisson, default non-linearity is exp
+# ignore the regularizer for now, more about it later
+model = nmo.glm.GLM(regularizer=nmo.regularizer.UnRegularized(solver_name="LBFGS"))
 
-# linear
-linear = np.squeeze(input_feature) * np.squeeze(model.coef_) + model.intercept_
-# non-linearity is called inverse-link function, a naming convention from statistics
-# it is stored in the observation model attribute
-predicted_rate = model.observation_model.inverse_link_function(linear.d)
-predicted_rate = nap.Tsd(t=input_feature.t, d=np.asarray(predicted_rate))
+# set the weights and intercept (usually learned, but hard-coded for the example)
+# in nemos weights are (num_neurons, num_features)
+model.coef_ = np.atleast_2d(w)
+# and intercepts (num_neurons,)
+model.intercept_ = np.atleast_1d(c)
 
-# in nemos, this transformation computed in a single step by the model `predict` method.
+# equivalently in a single step, call the `predict` method passing the current
 predicted_rate_nmo = model.predict(input_feature.d)
 predicted_rate_nmo = nap.Tsd(t=input_feature.t, d=np.squeeze(np.asarray(predicted_rate_nmo)))
-
 
 # %%
 # let's plot each step for 500ms
 interval = nap.IntervalSet(start=471, end=471.5)
 plt.figure(figsize=(10, 3.5))
 ax = plt.subplot(1, 3, 1)
-ax.set_title("Current")
-ax.plot(np.squeeze(input_feature.restrict(interval)))
+ax.set_title("Current $i(t)$")
+ax.plot(np.squeeze(input_feature.restrict(interval)), color="grey")
 ax = plt.subplot(1, 3, 2)
-ax.set_title("Linearly Transformed")
-ax.plot(np.squeeze(linear.restrict(interval)))
+ax.set_title("Linearly Transformed $L(t)$")
+ax.plot(np.squeeze(L.restrict(interval)), color="orange")
 ax.set_xlabel("Time (s)")
 ax = plt.subplot(1, 3, 3)
-ax.set_title("LNL Transformed")
-ax.plot(np.squeeze(predicted_rate.restrict(interval)))
-ax.plot(np.squeeze(predicted_rate_nmo.restrict(interval)), "--k")
+ax.set_title(r"Rate $\lambda(t)$")
+ax.plot(np.squeeze(predicted_rate.restrict(interval)), color="tomato", label=r"$\exp(w \cdot i(t) + c)$")
+ax.plot(np.squeeze(predicted_rate_nmo.restrict(interval)), "--", label="nemos")
+plt.legend()
 plt.tight_layout()
 
 
@@ -306,11 +319,25 @@ plt.tight_layout()
 #     choices guarantee convexity, i.e. a single optimal solution.
 #     In principle, one could choose a more complex non-linearity, but convexity is not
 #     guaranteed in general.
-#
 
-# Use a second order method for a more precise estimates of the maximum-likelihood
-glm = nmo.glm.GLM(regularizer=nmo.regularizer.UnRegularized(solver_name="LBFGS"))
-glm.fit(input_feature, count)
+# %%
+# ### 3. The Poisson log-likelihood
+# The last component of the model is the poisson log-likelihood that quantifies how likely it is
+# to observe certain counts for a given firing rate.
+# The if $y(t)$ are the spike counts, the equation for the log-likelihood is
+# $$ \sum\_t \log P(y(t) | \lambda(t)) = \sum\_t  y(t) \log(\lambda(t)) - \lambda(t) - \log (y(t)!)\tag{2}$$
+# In nemos, the likelihood can be computed by calling the score method passing the predictors and the counts.
+# The method first compute the rate $\lambda(t)$ using (1) and then the likelihood using (2).
+
+log_likelihood_0 = model.score(input_feature, counts, score_type="log-likelihood")
+print(f"log-likelihood hard-coded weights: {log_likelihood_0}")
+
+# %%
+# We can learn the  maximum-likelihood (ML) weights by calling the fit method. If we compare the likelihood after
+# fitting, it increased.
+model.fit(input_feature, counts)
+log_likelihood_ML = model.score(input_feature, counts, score_type="log-likelihood")
+print(f"log-likelihood ML weights: {log_likelihood_ML}")
 
 # %%
 # !!! warning
@@ -319,7 +346,7 @@ glm.fit(input_feature, count)
 # %%
 # Now that we've fit our data, we can use the model to predict the firing rates and
 # convert units from spikes/bin to spikes/sec
-predicted_fr = glm.predict(input_feature) / bin_size
+predicted_fr = model.predict(input_feature) / bin_size
 
 # let's reintroduce the time axis by defining a TsdFrame
 # convert first to numpy array otherwise to make it pynapple compatible
@@ -383,35 +410,14 @@ plt.tight_layout()
 tuning_curve_model = nap.compute_1d_tuning_curves_continuous(predicted_fr, current, 15)
 
 plt.figure()
-plt.plot(tuning_curve, "k", label="observed")
+tc_idx = tuning_curve.index.to_numpy()
+tc_val = tuning_curve.values.flatten()
+width = tc_idx[1]-tc_idx[0]
+plt.bar(tc_idx, tc_val, width, facecolor="grey", edgecolor="k", label="observed", alpha=0.4)
 plt.plot(tuning_curve_model, color="tomato", label="glm")
 plt.ylabel("Firing rate (Hz)")
 plt.xlabel("Current (pA)")
 plt.legend()
-
-# Input and predicted rate looks very similar, why?
-interval = nap.IntervalSet(start=471, end=472)
-fig, axs = plt.subplots(2, 1, figsize=(12, 6))
-
-axs[0].plot(current.restrict(interval), "k")
-axs[0].set_ylabel("Current (pA)")
-axs[1].plot(predicted_fr.restrict(interval), "tomato")
-axs[1].set_xlabel("Time (s)")
-axs[1].set_ylabel("Firing rate (Hz)")
-plt.tight_layout()
-
-# %%
-# This is true even if the model
-
-# pass it through the log
-rate = np.exp(glm.coef_[0,0] * current + glm.intercept_[0]) / bin_size
-fig, ax = plt.subplots(1, 1, figsize=(12, 6))
-
-ax.plot(rate.restrict(interval), "b")
-ax.set_ylabel("Firing rate (Hz)")
-ax.plot(predicted_fr.restrict(interval), "tomato", ls="--")
-ax.set_xlabel("Time (s)")
-plt.tight_layout()
 
 
 # pred_fr = nap.TsdFrame(binned_current.t, np.array(pred_fr))
