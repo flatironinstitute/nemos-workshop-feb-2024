@@ -2,6 +2,7 @@
 
 import matplotlib.pyplot as plt
 
+
 def set_two_y_axes_zeros_equal(ax1: plt.Axes, ax2: plt.Axes):
     """Changes ylims so that the zeros on two axes to occur at the same point.
 

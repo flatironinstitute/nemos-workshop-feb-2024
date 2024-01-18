@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 
-import h5py
 from typing import Tuple
-import pynapple as nap
+
+import h5py
 import numpy as np
+import pynapple as nap
+
 
 def get_sweep_metadata(sweep_number: int, fh: h5py.File):
     sweep_metadata = {}

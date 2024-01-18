@@ -6,16 +6,20 @@
 Super simple (or not)
 """
 
-import numpy as np
-import matplotlib.pyplot as plt
 import jax
+import math
+import os
+
+
+import matplotlib.pyplot as plt
 import nemos as nmo
+import numpy as np
 import pynapple as nap
-import utils
-from typing import Optional
-import requests, math, os, sys
+import requests
 import tqdm
 
+# required for second order methods (BFGS, Newton-CG)
+jax.config.update("jax_enable_x64", True)
 
 # %%
 # ## DATA STREAMING
@@ -28,9 +32,9 @@ path = os.path.join(os.getcwd(), "allen_478498617.nwb")
 if os.path.basename(path) not in os.listdir(os.getcwd()):
     r = requests.get(f"https://osf.io/um3bj/download", stream=True)
     block_size = 1024*1024
-    with open(path, 'wb') as f:
-        for data in tqdm.tqdm(r.iter_content(block_size), unit='MB', unit_scale=True,
-            total=math.ceil(int(r.headers.get('content-length', 0))//block_size)):
+    with open(path, "wb") as f:
+        for data in tqdm.tqdm(r.iter_content(block_size), unit="MB", unit_scale=True,
+            total=math.ceil(int(r.headers.get("content-length", 0))//block_size)):
             f.write(data)
 
 
@@ -48,13 +52,13 @@ print(data)
 # %%
 # With pynapple, you can quickly extract time series from the NWB files.
 
-trial_interval_set = data['epochs']
-current = data['stimulus']*1e12
-response = data['response']
-spikes = data['units']
+trial_interval_set = data["epochs"]
+current = data["stimulus"] * 1e12
+response = data["response"]
+spikes = data["units"]
 
 # %% 
-# First let's examine what trial_interval_set is. 
+# First let"s examine what trial_interval_set is.
 
 print(trial_interval_set.keys())
 
@@ -62,7 +66,7 @@ print(trial_interval_set.keys())
 # In this case, it's a dictionnary of IntervalSet.
 # During the recording, multiple types of current were injected to the cell. For this tutorial, we will take "Noise 1".
 
-noise_interval = trial_interval_set['Noise 1']
+noise_interval = trial_interval_set["Noise 1"]
 
 print(noise_interval)
 
@@ -103,8 +107,8 @@ current = current.restrict(noise_interval)
 # Now we can visualize for the first epoch of `noise_interval` all the data together.
 
 fig, ax = plt.subplots(1, 1, figsize=(12,4))
-ax.plot(current)
-ax.plot(spikes.to_tsd([-5]), '|', color='red', ms = 10)
+ax.plot(current, "grey")
+ax.plot(spikes.to_tsd([-5]), "|", color="k", ms = 10)
 ax.set_ylabel("Current (pA)")
 ax.set_xlabel("Time (s)")
 plt.show()
@@ -120,7 +124,7 @@ print(tuning_curve)
 # In this case tuning_curve is a pandas DataFrame where each column is a neuron (one neuron in this case) and each row is a bin over the feature. We can plot the tuning curve of the neuron.
 
 fig, ax = plt.subplots(1, 1, figsize=(12,4))
-ax.plot(tuning_curve)
+ax.plot(tuning_curve, color="k")
 ax.set_xlabel("Current (pA)")
 ax.set_ylabel("Firing rate (Hz)")
 plt.show()
@@ -139,29 +143,56 @@ print(count)
 firing_rate = count.smooth(50, 1000) / bin_size
 
 # %%
-# Let's plot the firing rate against the spike times.
-ex_interval = current.threshold(0.0).time_support.loc[[2]]
-#nap.IntervalSet(start=470.80, end=473.85)
+# Let"s plot the firing rate against the spike times.
+ex_intervals = current.threshold(0.0).time_support
 
-fig, ax = plt.subplots(2, 3, figsize=(12,6))
-ax[0].plot(current, color = 'xkcd:banana')
-ax[0].set_ylabel("Current (pA)")
-ax[0].axvspan(ex_interval.loc[0,'start'], ex_interval.loc[0,'end'], alpha=0.2)
-ax[1].plot(firing_rate, color = 'k')
-ax[1].plot(spikes.to_tsd([-1]), '|', color = 'k', ms = 10)
-ax[1].axvspan(ex_interval.loc[0,'start'], ex_interval.loc[0,'end'], alpha=0.2)
-ax[1].set_ylabel("Firing rate (Hz)")
-ax[2].plot(firing_rate.restrict(ex_interval), color = 'k')
-ax[2].plot(spikes.restrict(ex_interval).to_tsd([-1]), '|', color = 'k', ms = 10)
-ax[2].set_xlabel("Time (s)")
-ax[2].set_ylabel("Firing rate (Hz)")
+
+# define plotting parameters
+# colormap, color levels and transparency level
+# for the current injection epochs
+cmap = plt.get_cmap("autumn")
+color_levs = [0.2, 0.5, 0.8]
+alpha = 0.4
+
+fig = plt.figure()
+# first row subplot: current
+ax = plt.subplot2grid((3, 3), loc=(0, 0), rowspan=1, colspan=3, fig=fig)
+ax.plot(current, color="grey")
+ax.set_ylabel("Current (pA)")
+ax.set_title("Injected Current")
+ax.axvspan(ex_intervals.loc[1,"start"], ex_intervals.loc[1,"end"], alpha=alpha, color=cmap(color_levs[0]))
+ax.axvspan(ex_intervals.loc[2,"start"], ex_intervals.loc[2,"end"], alpha=alpha, color=cmap(color_levs[1]))
+ax.axvspan(ex_intervals.loc[3,"start"], ex_intervals.loc[3,"end"], alpha=alpha, color=cmap(color_levs[2]))
+
+# second row subplot: response
+ax = plt.subplot2grid((3, 3), loc=(1, 0), rowspan=1, colspan=3, fig=fig)
+ax.plot(firing_rate, color="k")
+ax.plot(spikes.to_tsd([-1.5]), "|", color="k", ms=10)
+ax.set_ylabel("Firing rate (Hz)")
+ax.set_xlabel("Time (s)")
+ax.set_title("Response")
+ax.axvspan(ex_intervals.loc[1,"start"], ex_intervals.loc[1,"end"], alpha=alpha, color=cmap(color_levs[0]))
+ax.axvspan(ex_intervals.loc[2,"start"], ex_intervals.loc[2,"end"], alpha=alpha, color=cmap(color_levs[1]))
+ax.axvspan(ex_intervals.loc[3,"start"], ex_intervals.loc[3,"end"], alpha=alpha, color=cmap(color_levs[2]))
+ylim = ax.get_ylim()
+
+# third subplot: zoomed responses
+for i in range(len(ex_intervals)-1):
+    interval = ex_intervals.loc[[i+1]]
+    ax = plt.subplot2grid((3, 3), loc=(2, i), rowspan=1, colspan=1, fig=fig)
+    ax.plot(firing_rate.restrict(interval), color="k")
+    ax.plot(spikes.restrict(interval).to_tsd([-1.5]), "|", color="k", ms=10)
+    ax.set_ylabel("Firing rate (Hz)")
+    ax.set_xlabel("Time (s)")
+    ax.set_ylim(ylim)
+    for spine in ["left", "right", "top", "bottom"]:
+        color = cmap(color_levs[i])
+        # add transparency
+        color = (*color[:-1], alpha)
+        ax.spines[spine].set_color(color)
+        ax.spines[spine].set_linewidth(2)
+
 plt.tight_layout()
-plt.show()
-
-
-# grid plot with first row current, second row response, third row subplots with resp (color match the
-# axis with the rectangles showing the simulations
-
 
 # %%
 # ##NEMOS
@@ -179,7 +210,7 @@ plt.show()
 # %%
 # For nemo's GLM, our input must be 3d: (num_time_pts, num_neurons,
 # num_features). This will be 2d, so let's add an extra dimension to the current Tsd object.
-input_feature = nap.TsdFrame(t=current.t, d=current.d, columns = ['current'])
+input_feature = nap.TsdFrame(t=current.t, d=current.d, columns = ["current"])
 
 # %%
 # First we need to downsample the input feature to match the time resolution of the binned spikes.
@@ -199,7 +230,9 @@ print(count)
 # %%
 # To start, we will do the unregularized GLM (see XXX for details on
 # regularization)
-glm = nmo.glm.GLM(regularizer=nmo.regularizer.UnRegularized())
+
+# Use a second order method and low-tolerance for a precise estimates of the maximum-likelihood
+glm = nmo.glm.GLM(regularizer=nmo.regularizer.UnRegularized(solver_name="BFGS", solver_kwargs=dict(tol=10**-12)))
 glm.fit(input_feature, count)
 
 # %%
@@ -212,25 +245,58 @@ predicted_fr = glm.predict(input_feature) / bin_size
 predicted_fr = nap.TsdFrame(t=count.t, d=np.asarray(predicted_fr))
 smooth_predicted_fr = predicted_fr.smooth(50, 1000)
 
-# we can compare the model predicted rate with the observed one
-fig, ax = plt.subplots(3, 1, figsize=(12,6))
-ax[0].plot(current, color = 'xkcd:banana')
-ax[0].set_ylabel("Current (pA)")
-ax[0].axvspan(ex_interval.loc[0,'start'], ex_interval.loc[0,'end'], alpha=0.2)
-ax[1].plot(firing_rate, color = 'k')
-ax[1].plot(spikes.to_tsd([-1]), '|', color = 'k', ms = 10)
-ax[1].plot(smooth_predicted_fr, color="tomato", ls="--")
-ax[1].axvspan(ex_interval.loc[0,'start'], ex_interval.loc[0,'end'], alpha=0.2)
-ax[1].set_ylabel("Firing rate (Hz)")
-ax[2].plot(firing_rate.restrict(ex_interval), color = 'k')
-ax[2].plot(spikes.restrict(ex_interval).to_tsd([-1]), '|', color ='k', ms = 10)
-ax[2].plot(smooth_predicted_fr.restrict(ex_interval), color="tomato", ls="--")
-ax[2].set_xlabel("Time (s)")
-ax[2].set_ylabel("Firing rate (Hz)")
-plt.tight_layout()
-plt.show()
+# %%
+# We can compare the model predicted rate with the observed ones. The predicted rate
+# is small but never 0, even when the injected current is below the firing threshold (yellow subplot); And,
+# since the average rate is captured correctly by the model, for higher injected currents the rate
+# is over-estimated.
 
-# same fig as above but with filtered model rates
+# compare observed mean firing rate with the model predicted one
+print(f"Observed mean firing rate: {np.mean(count) / bin_size} Hz")
+print(f"Predicted mean firing rate: {np.mean(predicted_fr)} Hz")
+
+fig = plt.figure()
+# first row subplot: current
+ax = plt.subplot2grid((3, 3), loc=(0, 0), rowspan=1, colspan=3, fig=fig)
+ax.plot(current, color="grey")
+ax.set_ylabel("Current (pA)")
+ax.set_title("Injected Current")
+ax.axvspan(ex_intervals.loc[1, "start"], ex_intervals.loc[1, "end"], alpha=alpha, color=cmap(color_levs[0]))
+ax.axvspan(ex_intervals.loc[2, "start"], ex_intervals.loc[2, "end"], alpha=alpha, color=cmap(color_levs[1]))
+ax.axvspan(ex_intervals.loc[3, "start"], ex_intervals.loc[3, "end"], alpha=alpha, color=cmap(color_levs[2]))
+
+# second row subplot: response
+ax = plt.subplot2grid((3, 3), loc=(1, 0), rowspan=1, colspan=3, fig=fig)
+ax.plot(firing_rate, color="k", label="observed")
+ax.plot(smooth_predicted_fr, color="tomato", label="glm")
+ax.plot(spikes.to_tsd([-1.5]), "|", color="k", ms=10)
+ax.set_ylabel("Firing rate (Hz)")
+ax.set_xlabel("Time (s)")
+ax.set_title("Response")
+ax.legend()
+ax.axvspan(ex_intervals.loc[1, "start"], ex_intervals.loc[1, "end"], alpha=alpha, color=cmap(color_levs[0]))
+ax.axvspan(ex_intervals.loc[2, "start"], ex_intervals.loc[2, "end"], alpha=alpha, color=cmap(color_levs[1]))
+ax.axvspan(ex_intervals.loc[3, "start"], ex_intervals.loc[3, "end"], alpha=alpha, color=cmap(color_levs[2]))
+ylim = ax.get_ylim()
+
+# third subplot: zoomed responses
+for i in range(len(ex_intervals)-1):
+    interval = ex_intervals.loc[[i+1]]
+    ax = plt.subplot2grid((3, 3), loc=(2, i), rowspan=1, colspan=1, fig=fig)
+    ax.plot(firing_rate.restrict(interval), color="k")
+    ax.plot(smooth_predicted_fr.restrict(interval), color="tomato")
+    ax.plot(spikes.restrict(interval).to_tsd([-1.5]), "|", color="k", ms=10)
+    ax.set_ylabel("Firing rate (Hz)")
+    ax.set_xlabel("Time (s)")
+    ax.set_ylim(ylim)
+    for spine in ["left", "right", "top", "bottom"]:
+        color = cmap(color_levs[i])
+        # add transparency
+        color = (*color[:-1], alpha)
+        ax.spines[spine].set_color(color)
+        ax.spines[spine].set_linewidth(2)
+
+plt.tight_layout()
 
 # We can compare the tuning curves
 tuning_curve_model = nap.compute_1d_tuning_curves_continuous(predicted_fr, current, 15)
@@ -253,6 +319,8 @@ axs[1].set_xlabel("Time (s)")
 axs[1].set_ylabel("Firing rate (Hz)")
 plt.tight_layout()
 
+# %%
+# This is true even if the model
 
 # pass it through the log
 rate = np.exp(glm.coef_[0,0] * current + glm.intercept_[0]) / bin_size

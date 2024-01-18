@@ -6,16 +6,19 @@
 C'est la vie
 """
 
-import numpy as np
-import matplotlib.pyplot as plt
-import jax
-import nemos as nmo
-import pynapple as nap
-import utils
+import math
+import os
+import sys
 from typing import Optional
-import requests, math, os, sys
-import tqdm
 
+import jax
+import matplotlib.pyplot as plt
+import nemos as nmo
+import numpy as np
+import pynapple as nap
+import requests
+import tqdm
+import utils
 
 # %%
 # ## DATA STREAMING
