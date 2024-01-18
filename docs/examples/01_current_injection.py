@@ -216,20 +216,19 @@ plt.tight_layout()
 # In this most basic form, the model components will be the following:
 #
 # ### 1. Predictor & Observations
-# We are using the input current as a predictor. it is a Tsd object sampled at 20KHz, while counts
-# are sampled at 1KHz (1ms bin size).
+# We are using the input current as the only predictor.
+# Nemos requires predictors and counts to have the same number of samples.
+# We can achieve that by down-sampling our current to the spike counts resolution using the bin_average method from
+# pynapple.
 
-print(f"current shape: {current.shape}")
-print(f"current sampling rate: {current.rate/1000.} KHz")
+input_feature = current.bin_average(bin_size, ep=noise_interval)
+
+print(f"current shape: {input_feature.shape}")
+print(f"current sampling rate: {input_feature.rate/1000.} KHz")
 
 print(f"\ncount shape: {count.shape}")
 print(f"count sampling rate: {count.rate/1000} KHz")
 
-# %%
-# Nemos requires predictors and counts to have the same number of samples.
-# We can achieve that by down-sampling our current to the spike counts resolution using the bin_average method from
-# pynapple.
-input_feature = current.bin_average(bin_size, ep=noise_interval)
 
 # %%
 # Secondly we have to appropriately expand our variable dimensions, because nemos requires features of
@@ -306,7 +305,7 @@ ax.plot(np.squeeze(L.restrict(interval)), color="orange")
 ax.set_xlabel("Time (s)")
 ax = plt.subplot(1, 3, 3)
 ax.set_title(r"Rate $\lambda(t)$")
-ax.plot(np.squeeze(predicted_rate.restrict(interval)), color="tomato", label=r"$\exp(w \cdot i(t) + c)$")
+ax.plot(np.squeeze(predicted_rate.restrict(interval)), color="tomato", label=r"$\exp(L(t))$")
 ax.plot(np.squeeze(predicted_rate_nmo.restrict(interval)), "--", label="nemos")
 plt.legend()
 plt.tight_layout()
