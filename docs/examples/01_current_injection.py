@@ -13,6 +13,7 @@ import os
 
 import matplotlib.pyplot as plt
 import nemos as nmo
+import nemos.glm
 import numpy as np
 import pynapple as nap
 import requests
@@ -77,7 +78,7 @@ print(noise_interval)
 noise_interval.loc[[0]]
 
 # %%
-# We can look at the current. 
+# We can look at the current.
 
 print(current)
 
@@ -87,7 +88,7 @@ print(current)
 current.restrict(noise_interval)
 
 # %%
-# The third object we are interacting with is the TsGroup for a group of timestamps. This is typically, a population of neurons. In this case we have only one neuron so there is only one row. 
+# The third object we are interacting with is the TsGroup for a group of timestamps. This is typically, a population of neurons. In this case we have only one neuron so there is only one row.
 
 print(spikes)
 
@@ -139,7 +140,7 @@ count = spikes.count(bin_size, ep=noise_interval)
 print(count)
 
 # %%
-# The GLM model is going to predict a firing rate. To be able to compare the output, we can compute the neuron firing rate. 
+# The GLM model is going to predict a firing rate. To be able to compare the output, we can compute the neuron firing rate.
 firing_rate = count.smooth(50, 1000) / bin_size
 
 # %%
@@ -208,28 +209,104 @@ plt.tight_layout()
 # complications later.)
 
 # %%
-# For nemo's GLM, our input must be 3d: (num_time_pts, num_neurons,
-# num_features). This will be 2d, so let's add an extra dimension to the current Tsd object.
-input_feature = nap.TsdFrame(t=current.t, d=current.d, columns = ["current"])
+# In this most basic form, the model components will be the following:
+#
+# 1. The predictor and the observations, i.e. the injected current and the counts
+# 2. A liner-non-linear map that maps the predictor into a firing rate.
+# 3. The Poisson log-likelihood that quantifies how likely are the observed count for a given firing rate.
+#
+# Let's define and inspect one component at the time.
+#
+# ### 1. Predictor & Observations
+# The input current is now a Tsd object, of shape (num_time_pts, ) sampled at 20KHz, while counts
+# are binned at 1KHz (1ms bin size).
+
+print(f"current shape: {current.shape}")
+print(f"current sampling rate: {current.rate/1000.} KHz")
+
+print(f"\ncount shape: {count.shape}")
+print(f"count sampling rate: {count.rate/1000} KHz")
 
 # %%
-# First we need to downsample the input feature to match the time resolution of the binned spikes.
-# Here we use pynapple's function `bin_average` with the same time resolution.
-input_feature = input_feature.bin_average(bin_size, ep = noise_interval)
+# As a first step, we should down-sample it to the resolution of the spike counts.
+# We can use the bin_average method from pynapple to achieve this.
+input_feature = current.bin_average(bin_size, ep=noise_interval)
+
+# Additional step, nemos requires predictors of shape (num_time_pts, num_neurons, num_features) and
+# counts of shape (num_time_pts, num_neurons). We are modeling
+# one neuron with one predictor. pynapple as a class called TsdFrame for 2-dimensional data and TsdTensor
+# n-dimensnoal data, n > 2.
+
+input_feature = nap.TsdTensor(t=input_feature.t, d=np.expand_dims(input_feature.d, (1, 2)))
+counts = nap.TsdFrame(t=count.t, d=count.d, columns="count")
+
+# check that the dimensionality matches nemos expectation
+print(f"feature shape: {input_feature.shape}")
+print(f"count shape: {count.shape}")
 
 # %%
-# Let's add an addional dimension. Nemos needs (num_time_pts, num_neurons, num_features)
-input_feature = np.expand_dims(input_feature, 1)
+# ### 2. Linear-Non-Linear transformation of the current
+# Our feature current $i(t)$, is first passed by a linear (affine more precisely) transformation.
+# Since it is 1-dimensional, this is equivalent to scaling it by a constant ad adding an intercept
+# $$
+# L(i(t)) = w \cdot i(t) + c
+# $$
+# Then a non-linearity is applied to transform this quantity into a positive firing rate.
+# $$ r(t) = \exp (w \cdot i(t) + c) $$
+# Let's see how this linear-non-linear transformation is implemented in nemos.
+# First we need to define a model object.
 
-print(input_feature)
+# this the defines the model object, ignore the regularizer for now, more about it
+# in future tutorial, we are just changing the default.
+model = nmo.glm.GLM(regularizer=nmo.regularizer.UnRegularized(solver_name="LBFGS"))
 
 # %%
-# We can check that the number of time points matches with the spike counts. 
-print(count)
+# Usually we would fit the weights and intercepts, but for this demonstration we hard code them
+# In nemos weights are (num_neurons, num_features) and intercepts (num_neurons,)
+w = np.atleast_2d(0.05)
+c = np.atleast_1d(-2)
+
+model.coef_ = w
+model.intercept_ = c
+
+# linear
+linear = np.squeeze(input_feature) * np.squeeze(model.coef_) + model.intercept_
+# non-linearity is called inverse-link function, a naming convention from statistics
+# it is stored in the observation model attribute
+predicted_rate = model.observation_model.inverse_link_function(linear.d)
+predicted_rate = nap.Tsd(t=input_feature.t, d=np.asarray(predicted_rate))
+
+# in nemos, this transformation computed in a single step by the model `predict` method.
+predicted_rate_nmo = model.predict(input_feature.d)
+predicted_rate_nmo = nap.Tsd(t=input_feature.t, d=np.squeeze(np.asarray(predicted_rate_nmo)))
+
 
 # %%
-# To start, we will do the unregularized GLM (see XXX for details on
-# regularization)
+# let's plot each step for 500ms
+interval = nap.IntervalSet(start=471, end=471.5)
+plt.figure(figsize=(10, 3.5))
+ax = plt.subplot(1, 3, 1)
+ax.set_title("Current")
+ax.plot(np.squeeze(input_feature.restrict(interval)))
+ax = plt.subplot(1, 3, 2)
+ax.set_title("Linearly Transformed")
+ax.plot(np.squeeze(linear.restrict(interval)))
+ax.set_xlabel("Time (s)")
+ax = plt.subplot(1, 3, 3)
+ax.set_title("LNL Transformed")
+ax.plot(np.squeeze(predicted_rate.restrict(interval)))
+ax.plot(np.squeeze(predicted_rate_nmo.restrict(interval)), "--k")
+plt.tight_layout()
+
+
+# %%
+# !!! info
+#     Only the weights $w$ and the intercept $c$ are learned, the non-linearity is kept fixed.
+#     In nemos, we default to the exponential, other choices such as soft-plus, are allowed. These
+#     choices guarantee convexity, i.e. a single optimal solution.
+#     In principle, one could choose a more complex non-linearity, but convexity is not
+#     guaranteed in general.
+#
 
 # Use a second order method for a more precise estimates of the maximum-likelihood
 glm = nmo.glm.GLM(regularizer=nmo.regularizer.UnRegularized(solver_name="LBFGS"))
