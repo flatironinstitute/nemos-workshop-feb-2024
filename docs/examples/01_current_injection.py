@@ -151,7 +151,7 @@ ex_intervals = current.threshold(0.0).time_support
 # colormap, color levels and transparency level
 # for the current injection epochs
 cmap = plt.get_cmap("autumn")
-color_levs = [0.2, 0.5, 0.8]
+color_levs = [0.8, 0.5, 0.2]
 alpha = 0.4
 
 fig = plt.figure()
@@ -231,9 +231,13 @@ print(count)
 # To start, we will do the unregularized GLM (see XXX for details on
 # regularization)
 
-# Use a second order method and low-tolerance for a precise estimates of the maximum-likelihood
-glm = nmo.glm.GLM(regularizer=nmo.regularizer.UnRegularized(solver_name="BFGS", solver_kwargs=dict(tol=10**-12)))
+# Use a second order method for a more precise estimates of the maximum-likelihood
+glm = nmo.glm.GLM(regularizer=nmo.regularizer.UnRegularized(solver_name="LBFGS"))
 glm.fit(input_feature, count)
+
+# %%
+# !!! warning
+#     explain why LBFGS
 
 # %%
 # Now that we've fit our data, we can use the model to predict the firing rates and
@@ -288,7 +292,7 @@ for i in range(len(ex_intervals)-1):
     ax.plot(spikes.restrict(interval).to_tsd([-1.5]), "|", color="k", ms=10)
     ax.set_ylabel("Firing rate (Hz)")
     ax.set_xlabel("Time (s)")
-    ax.set_ylim(ylim)
+    #ax.set_ylim(ylim)
     for spine in ["left", "right", "top", "bottom"]:
         color = cmap(color_levs[i])
         # add transparency
