@@ -272,7 +272,7 @@ print(convolved_count.shape)
 
 # %%
 # Build the right feature matrix
-use_tp = 5000
+use_tp = 50000
 features = convolved_count.reshape(convolved_count.shape[0], -1)
 features = np.expand_dims(features[:use_tp], 1)
 features = np.repeat(features, len(spikes), 1)
