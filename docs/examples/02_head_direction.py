@@ -113,7 +113,88 @@ count = nap.TsdFrame(t=count.t, d=count.values[:,pref_ang.reset_index(drop=True)
 
 # %%
 # ## NEMOS
-# It's time to use nemos. In this case, we want to use the activity of other neurons to predict the activity of a current neurons. We also want to introduce some time lag. We can use the basis of Nemos for this. 
+# It's time to use nemos. Our goal is to estimate the pairwise interaction between neurons.
+# This can be quantified with a GLM if we use the past neuronal activity to predict the next time step.
+# Before seeing how to model an entire neuronal populaiton, let's see how we can model a single neuron in this way.
+# The simplest approach to directly use the past spike count history over a fixed length window.
+
+# select a neuron
+neuron_count = count.loc[[0]]
+
+# fix a window size of 300ms (rate is in seconds)
+window_size = int(0.5 * neuron_count.rate)
+
+# create an input feature for the history (num_sample_pts, num_neuron, num_features)
+# one feature for each time point in the window
+input_feature = np.zeros((neuron_count.shape[0] - window_size, 1, window_size))
+for i in range(window_size, neuron_count.shape[0]):
+    input_feature[i-window_size, 0, :] = neuron_count[i-window_size:i]
+
+plt.figure(figsize=(5, 7))
+plt.suptitle("Input feature: Count History")
+for k in range(11):
+    ax = plt.subplot(10,1,k+1)
+    xvals = np.linspace(0,window_size-1,1000)
+    yvals = input_feature[k, 0][np.searchsorted(np.arange(window_size), xvals)]
+    plt.plot(xvals/count.rate, yvals, color="k")
+    ax.spines['top'].set_visible(False)
+    ax.spines['bottom'].set_visible(False)
+    ax.spines['left'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.set_yticks([])
+
+    if k != 9 :
+        ax.set_xticks([])
+    else:
+        ax.set_xlabel("window (sec)")
+    if k == 5:
+        ax.set_ylabel(f"time bin")
+
+plt.tight_layout()
+
+# %%
+# Now the feature dim is window_size = 30. If we select some weights, we can convert this feature matrix
+# to a rate by the usual linear non-linear transformation.
+# weight[i] represent how much the counts 30 - i  bins in the past contributes to the present rate.
+
+# assume some weights (here exp decay)
+weights = np.exp(np.linspace(-1, -2, window_size))
+intercept = -2
+
+# the predicted rate would be
+pred_rate = np.exp(np.squeeze(input_feature) @ weights + intercept)
+
+# via nemos
+model = nmo.glm.GLM(regularizer=nmo.regularizer.UnRegularized("LBFGS"))
+model.coef_ = np.atleast_2d(weights)
+model.intercept_ = np.atleast_1d(intercept)
+pred_rate_nmo = model.predict(input_feature)
+
+# check that they are the same
+
+
+# predict ml param
+model.fit(input_feature, neuron_count[window_size:, None])
+
+plt.figure()
+plt.title("spike history weights")
+plt.plot(model.coef_.flatten())
+
+# intoruce basis and show a smooth version of this
+basis = nmo.basis.RaisedCosineBasisLog(5)
+eval_basis = basis.evaluate_on_grid(window_size)[1]
+conv_spk = nmo.utils.convolve_1d_trials(eval_basis, [neuron_count[:, None]])[0]
+
+model2 = nmo.glm.GLM(regularizer=nmo.regularizer.UnRegularized("LBFGS"))
+model2.fit(conv_spk[:-1], neuron_count[window_size:, None])
+
+plt.figure()
+plt.title("spike history weights")
+plt.plot(model.coef_.flatten()[::-1])
+plt.plot(eval_basis@model2.coef_.flatten())
+
+# %%
+# We also want to introduce some time lag. We can use the basis of Nemos for this.
 # create three filters
 window_size = 30
 basis_obj = nmo.basis.RaisedCosineBasisLog(n_basis_funcs=4)
