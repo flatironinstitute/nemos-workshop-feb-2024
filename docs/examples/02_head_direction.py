@@ -299,30 +299,6 @@ for idx, weight in enumerate(np.transpose(weights, (2, 0, 1))):
 
 plt.tight_layout()
 
-# %%
-# We can compute the L2 integral norm under the filter squared $f(t)^2$, using the basis
-# $$
-# \int f(t)^2 dt = \sum _w_{ij} \int b_i(t) b_j(t) dt
-# $$
-# First define a custom function for computing $\int b_i(x)b_j(x) dx$
-# from scipy.integrate import simps
-# def integrate_basis(basis):
-#     x = np.linspace(0, 1, 10 ** 4)
-#     eval = basis.evaluate(x)
-#     eval_square = np.einsum("ti,tj->tij", eval, eval)
-#     return simps(eval_square, axis=0, dx=x[1]-x[0])
-#
-# # %%
-# # We can compute the integral and plot the results
-# # int_basis = integrate_basis(basis_obj)
-# # l2_norm = np.zeros(weights.shape[:2])
-# # for i in range(l2_norm.shape[0]):
-# #     for j in range(l2_norm.shape[1]):
-# #         l2_norm[i,j] = np.einsum("j,jk,k->", weights[i,j], int_basis, weights[i,j])
-
-# %%
-# Give the feature and plot the predicted firing rate as a matrix
-# Overly with spike counts and angle
 
 
 
