@@ -221,7 +221,7 @@ plt.vlines(cnt_interval.t[cnt_interval.d>0], -1, 1,"k",lw=1.5, label="spikes")
 plt.xlabel("time (sec)")
 plt.legend()
 
-
+# %%
 # This is equivalent to convolve the basis with the counts (without creating the large input_feature)
 # Operation that can be performed in nemos
 conv_spk = nmo.utils.convolve_1d_trials(eval_basis, [neuron_count[:, None]])[0]
