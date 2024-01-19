@@ -209,7 +209,7 @@ compressed_features = nap.TsdFrame(t=count[window_size:].t, d=compressed_feature
 
 # compare dimensionality of features
 print(f"Raw count history as feature: {np.squeeze(input_feature).shape}")
-print(f"Compressed count history as feature: {np.squeeze(compressed_features).shape}")
+print(f"Compressed count history as feature: {compressed_features.shape}")
 
 
 interval = nap.IntervalSet(8820.4, 8821)
