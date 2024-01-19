@@ -20,6 +20,8 @@ import requests
 import tqdm
 import utils
 
+jax.config.update("jax_enable_x64", True)
+
 # %%
 # ## DATA STREAMING
 # 
@@ -122,7 +124,7 @@ count = nap.TsdFrame(t=count.t, d=count.values[:,pref_ang.reset_index(drop=True)
 neuron_count = count.loc[[0]]
 
 # fix a window size of 300ms (rate is in seconds)
-window_size = int(0.5 * neuron_count.rate)
+window_size = int(1. * neuron_count.rate)
 
 # create an input feature for the history (num_sample_pts, num_neuron, num_features)
 # one feature for each time point in the window
@@ -132,9 +134,9 @@ for i in range(window_size, neuron_count.shape[0]):
 
 plt.figure(figsize=(5, 7))
 plt.suptitle("Input feature: Count History")
-for k in range(11):
-    ax = plt.subplot(10,1,k+1)
-    xvals = np.linspace(0,window_size-1,1000)
+for k in range(10):
+    ax = plt.subplot(10, 1, k+1)
+    xvals = np.linspace(0, window_size-1,1000)
     yvals = input_feature[k, 0][np.searchsorted(np.arange(window_size), xvals)]
     plt.plot(xvals/count.rate, yvals, color="k")
     ax.spines['top'].set_visible(False)
@@ -164,13 +166,11 @@ intercept = -2
 # the predicted rate would be
 pred_rate = np.exp(np.squeeze(input_feature) @ weights + intercept)
 
-# via nemos
+# or via nemos
 model = nmo.glm.GLM(regularizer=nmo.regularizer.UnRegularized("LBFGS"))
 model.coef_ = np.atleast_2d(weights)
 model.intercept_ = np.atleast_1d(intercept)
 pred_rate_nmo = model.predict(input_feature)
-
-# check that they are the same
 
 
 # predict ml param
@@ -178,20 +178,70 @@ model.fit(input_feature, neuron_count[window_size:, None])
 
 plt.figure()
 plt.title("spike history weights")
-plt.plot(model.coef_.flatten())
+# flip time plot how a spike affects the future rate
+plt.plot(np.arange(window_size)/count.rate, model.coef_.flatten()[::-1])
+plt.xlabel("time from spike (sec)")
+plt.ylabel("kernel")
 
-# intoruce basis and show a smooth version of this
-basis = nmo.basis.RaisedCosineBasisLog(5)
+# %%
+# The response in the previous figure seems fairly smooth (low dimensional). It may be captured as a
+# linear combination of simpler filters.
+#
+# One such filter, which has precision decaying linearly with time from spike is the log-raised cosine
+
+# define five dim basis
+basis = nmo.basis.RaisedCosineBasisLog(n_basis_funcs=10)
+
+# evaluate the basis to get a (window_sizd, n_basis_funcs) matrix
 eval_basis = basis.evaluate_on_grid(window_size)[1]
-conv_spk = nmo.utils.convolve_1d_trials(eval_basis, [neuron_count[:, None]])[0]
 
-model2 = nmo.glm.GLM(regularizer=nmo.regularizer.UnRegularized("LBFGS"))
-model2.fit(conv_spk[:-1], neuron_count[window_size:, None])
+# plot the basis
+plt.figure()
+plt.plot(eval_basis)
+
+# %%
+# We can "compress" input feature by multiplying the matrix with the basis.
+
+# Flip basis time axis, so that the leftward basis (narrowest basis) affects
+# most recent history
+compressed_features = np.squeeze(input_feature) @ eval_basis[::-1]
+compressed_features = nap.TsdFrame(t=count[window_size:].t, d=compressed_features)
+
+interval = nap.IntervalSet(8820.4, 8821)
+
+plt.figure()
+plt.plot(compressed_features.restrict(interval)[:, :3], label=[f"feature {k}" for k in range(3)])
+cnt_interval = neuron_count.restrict(interval)
+plt.vlines(cnt_interval.t[cnt_interval.d>0], -1, 1,"k",lw=1.5, label="spikes")
+plt.xlabel("time (sec)")
+plt.legend()
+
+
+# This is equivalent to convolve the basis with the counts (without creating the large input_feature)
+# Operation that can be performed in nemos
+conv_spk = nmo.utils.convolve_1d_trials(eval_basis, [neuron_count[:, None]])[0]
+conv_spk = nap.TsdTensor(t=count[window_size:].t, d=np.asarray(conv_spk[:-1]))
+
+plt.figure()
+plt.plot(compressed_features.restrict(interval)[:, :3], label=[f"feature {k}" for k in range(3)])
+plt.plot(conv_spk.restrict(interval)[:, 0, :3], ms=3, marker="o", ls="none", color="tomato")
+cnt_interval = neuron_count.restrict(interval)
+plt.vlines(cnt_interval.t[cnt_interval.d>0], -1, 1,"k",lw=1.5, label="spikes")
+plt.xlabel("time (sec)")
+plt.legend()
+
+
+# %%
+# We can fit the ML parameter with the basis and compare the predicted history effect
+# from the raw spike history and when using the basis
+
+model_basis = nmo.glm.GLM(regularizer=nmo.regularizer.UnRegularized("LBFGS"))
+model_basis.fit(conv_spk, neuron_count[window_size:, None])
 
 plt.figure()
 plt.title("spike history weights")
 plt.plot(model.coef_.flatten()[::-1])
-plt.plot(eval_basis@model2.coef_.flatten())
+plt.plot(eval_basis @ model_basis.coef_.flatten())
 
 # %%
 # We also want to introduce some time lag. We can use the basis of Nemos for this.
