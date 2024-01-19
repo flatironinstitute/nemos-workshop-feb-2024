@@ -272,14 +272,15 @@ print(convolved_count.shape)
 
 # %%
 # Build the right feature matrix
+use_tp = 5000
 features = convolved_count.reshape(convolved_count.shape[0], -1)
-features = np.expand_dims(features, 1)
+features = np.expand_dims(features[:use_tp], 1)
 features = np.repeat(features, len(spikes), 1)
 
 # %%
 # Now fit the GLM.
 model = nmo.glm.GLM(regularizer=nmo.regularizer.Ridge(regularizer_strength=0.1, solver_name="LBFGS"))
-model.fit(features[0:50000], count.values[window_size:][0:50000])
+model.fit(features, count.values[window_size:][:use_tp])
 
 # %%
 # Now extract the weights
