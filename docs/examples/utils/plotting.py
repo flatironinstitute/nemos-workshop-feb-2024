@@ -1,29 +1,57 @@
 #!/usr/bin/env python3
 
 import matplotlib.pyplot as plt
+import pynapple as nap
 
 
-def set_two_y_axes_zeros_equal(ax1: plt.Axes, ax2: plt.Axes):
-    """Changes ylims so that the zeros on two axes to occur at the same point.
+def current_injection_plot(current: nap.Tsd, spikes: nap.TsGroup,
+                           firing_rate: nap.TsdFrame):
+    ex_intervals = current.threshold(0.0).time_support
 
-    Changes the limits of ax2.
 
-    It's intended for a figure with two y-axes on the same plot (using
-    plt.twinx()) but will probably work in other contexts
+    # define plotting parameters
+    # colormap, color levels and transparency level
+    # for the current injection epochs
+    cmap = plt.get_cmap("autumn")
+    color_levs = [0.8, 0.5, 0.2]
+    alpha = 0.4
 
-    based on
-    https://stackoverflow.com/questions/27135162/guaranteeing-0-at-same-level-on-left-and-right-y-axes-python-matplotlib
+    fig = plt.figure()
+    # first row subplot: current
+    ax = plt.subplot2grid((3, 3), loc=(0, 0), rowspan=1, colspan=3, fig=fig)
+    ax.plot(current, color="grey")
+    ax.set_ylabel("Current (pA)")
+    ax.set_title("Injected Current")
+    ax.axvspan(ex_intervals.loc[1,"start"], ex_intervals.loc[1,"end"], alpha=alpha, color=cmap(color_levs[0]))
+    ax.axvspan(ex_intervals.loc[2,"start"], ex_intervals.loc[2,"end"], alpha=alpha, color=cmap(color_levs[1]))
+    ax.axvspan(ex_intervals.loc[3,"start"], ex_intervals.loc[3,"end"], alpha=alpha, color=cmap(color_levs[2]))
 
-    """
-    min_left, max_left = ax1.get_ylim()
-    min_right, max_right = ax2.get_ylim()
-    print(min_right,  max_right)
+    # second row subplot: response
+    ax = plt.subplot2grid((3, 3), loc=(1, 0), rowspan=1, colspan=3, fig=fig)
+    ax.plot(firing_rate, color="k")
+    ax.plot(spikes.to_tsd([-1.5]), "|", color="k", ms=10)
+    ax.set_ylabel("Firing rate (Hz)")
+    ax.set_xlabel("Time (s)")
+    ax.set_title("Response")
+    ax.axvspan(ex_intervals.loc[1,"start"], ex_intervals.loc[1,"end"], alpha=alpha, color=cmap(color_levs[0]))
+    ax.axvspan(ex_intervals.loc[2,"start"], ex_intervals.loc[2,"end"], alpha=alpha, color=cmap(color_levs[1]))
+    ax.axvspan(ex_intervals.loc[3,"start"], ex_intervals.loc[3,"end"], alpha=alpha, color=cmap(color_levs[2]))
+    ylim = ax.get_ylim()
 
-    ratio_left = abs(min_left)/(max_left+abs(min_left))
-    ratio_right = abs(min_right)/(max_right+abs(min_right))
+    # third subplot: zoomed responses
+    for i in range(len(ex_intervals)-1):
+        interval = ex_intervals.loc[[i+1]]
+        ax = plt.subplot2grid((3, 3), loc=(2, i), rowspan=1, colspan=1, fig=fig)
+        ax.plot(firing_rate.restrict(interval), color="k")
+        ax.plot(spikes.restrict(interval).to_tsd([-1.5]), "|", color="k", ms=10)
+        ax.set_ylabel("Firing rate (Hz)")
+        ax.set_xlabel("Time (s)")
+        ax.set_ylim(ylim)
+        for spine in ["left", "right", "top", "bottom"]:
+            color = cmap(color_levs[i])
+            # add transparency
+            color = (*color[:-1], alpha)
+            ax.spines[spine].set_color(color)
+            ax.spines[spine].set_linewidth(2)
 
-    if ratio_left <= ratio_right:
-        max_right = min_right * max_left / min_left
-    else:
-        min_right = max_right * min_left / max_left
-    ax2.set_ylim(min_right, max_right)
+    plt.tight_layout()

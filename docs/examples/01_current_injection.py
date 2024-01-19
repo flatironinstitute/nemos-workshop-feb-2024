@@ -1,34 +1,83 @@
 # -*- coding: utf-8 -*-
 
-"""
-# Fit injected current
+"""# Fit injected current
 
-Super simple (or not)
+For our first example, we will look at a very simple dataset: patch-clamp
+recordings from a single neuron in layer 4 of rodent primary visual cortex.
+This data is from the [Allen Brain
+Atlas](https://celltypes.brain-map.org/experiment/electrophysiology/478498617),
+and experimenters injected current directly into the cell, while recording the
+neuron's membrane potential and spiking behavior. The experiments varied the
+shape of the current across many sweeps, mapping the neuron's behavior in
+response to a wide range of potential inputs.
+
+!!! warning
+    Is this description of the experiment correct?
+
+For our purposes, we will examine only one of these sweeps, "Noise 1", in which
+the experimentalists injected three pulses of current. The current is a square
+pulse multiplied by a sinusoid of a fixed frequency, with some random noise
+riding on top.
+
+![Allen Brain Atlas view of the data we will analyze.](/assets/allen_data.png)
+
+In the figure above (from the Allen Brain Atlas website), we see the
+approximately 22 second sweep, with the input current plotted in the first row,
+the intracellular voltage in the second, and the recorded spikes in the third.
+(The grey lines and dots in the second and third rows comes from other sweeps
+with the same stimulus, which we'll ignore in this exercise.) When fitting the
+Generalized Linear Model, we are attempting to model the spiking behavior, and
+we generally do not have access to the intracellular voltage, so for the rest
+of this notebook, we'll use only the input current and the recorded spikes
+displayed in the first and third rows.
+
+First, let us see how to load in the data and reproduce the above figure, which
+we'll do using [pynapple](https://pynapple-org.github.io/pynapple/). We will
+use pynapple throughout this workshop, as it simplifies handling this type of
+data.
+
 """
 
+# Import everything
 import jax
 import math
 import os
-
-
 import matplotlib.pyplot as plt
 import nemos as nmo
 import nemos.glm
 import numpy as np
 import pynapple as nap
 import requests
-import scipy.stats
 import tqdm
+import utils
 
-# required for second order methods (BFGS, Newton-CG)
+# Set the default precision to float64, which is generally a good idea for
+# optimization purposes.
 jax.config.update("jax_enable_x64", True)
 
 # %%
-# ## DATA STREAMING
-# 
-# Here we load the data from OSF. The data is a NWB file from the Allen Institute.
-# blblalba say more
-# Just run this cell
+# ## Data Streaming
+#
+# While you can download the data directly from the Allen Brain Atlas and
+# interact with it using their
+# [AllenSDK](https://allensdk.readthedocs.io/en/latest/visual_behavior_neuropixels.html),
+# we prefer the burgeoning [Neurodata Without Borders (NWB)
+# standard](https://nwb-overview.readthedocs.io/en/latest/). We have converted
+# this single dataset to NWB and uploaded it to the [Open Science
+# Framework](https://osf.io/5crqj/). This allows us to easily load the data
+# using pynapple, and it will immediately be in a format that pynapple understands!
+#
+# !!! tip
+#
+#     Pynapple can stream any NWB-formatted dataset! See [their
+#     documentation](https://pynapple-org.github.io/pynapple/generated/gallery/tutorial_pynapple_dandi/)
+#     for more details, and see the [DANDI Archive](https://dandiarchive.org/)
+#     for a repository of compliant datasets.
+#
+# The first time the following cell is run, it will take a little bit of time
+# to download the data, and a progress bar will show the download's progress.
+# On subsequent runs, the cell gets skipped: we do not need to redownload the
+# data.
 
 path = os.path.join(os.getcwd(), "allen_478498617.nwb")
 if os.path.basename(path) not in os.listdir(os.getcwd()):
@@ -41,89 +90,251 @@ if os.path.basename(path) not in os.listdir(os.getcwd()):
 
 
 # %%
-# ## PYNAPPLE
-# The data have been copied to your local station.
-# We are gonna open the NWB file with pynapple
+# ## Pynapple
+#
+# ### Data structures and preparation
+#
+# Now that we've downloaded the data, let's open it with pynapple and examine
+# its contents.
 
 data = nap.load_file(path)
-
-# %%
-# What does it look like?
 print(data)
 
 # %%
-# With pynapple, you can quickly extract time series from the NWB files.
+#
+# The dataset contains several different pynapple objects, which we discussed
+# earlier today. Let's see how these relate to the data we visualized above:
+#
+# ![Annotated view of the data we will analyze.](/assets/allen_data_annotated.gif)
+# <!-- this gif created with the following imagemagick command: convert -layers OptimizePlus -delay 100 allen_data_annotated-units.svg allen_data_annotated-epochs.svg allen_data_annotated-stimulus.svg allen_data_annotated-response.svg -loop 0 allen_data_annotated.gif -->
+#
+# - `units`: timestamps of the neuron's spikes.
+# - `epochs`: start and end times of different intervals, defining the
+#   experimental structure, specifying when each stimulation protocol began and
+#   ended.
+# - `stimulus`: injected current, in Amperes, sampled at around 12k Hz.
+# - `response`: the neuron's intracellular voltage, sampled at around 12k Hz.
+#   We will not use this info in this example
+#
+# Now let's go through the relevant variables in some more detail:
 
 trial_interval_set = data["epochs"]
+# convert current from Ampere to pico-amperes, to match the above visualization
+# and move the values to a more reasonable range.
 current = data["stimulus"] * 1e12
-response = data["response"]
 spikes = data["units"]
 
 # %% 
-# First let"s examine what trial_interval_set is.
+# First, let's examine `trial_interval_set`:
 
-print(trial_interval_set.keys())
+trial_interval_set.keys()
 
 # %%
-# In this case, it's a dictionnary of IntervalSet.
-# During the recording, multiple types of current were injected to the cell. For this tutorial, we will take "Noise 1".
+#
+# `trial_interval_set` is a dictionary with strings for keys and
+# [`IntervalSets`](https://pynapple-org.github.io/pynapple/reference/core/interval_set/)
+# for values. Each key defines the stimulus protocol, with the value defining
+# the begining and end of that stimulation protocol.
 
 noise_interval = trial_interval_set["Noise 1"]
-
-print(noise_interval)
-
-# %%
-# As you can see there are 3 rows. Each contains the start and end (in seconds) of an epoch.
-# To select only one epoch from an IntervalSet, use 2 square brackets.
-
-noise_interval.loc[[0]]
+noise_interval
 
 # %%
-# We can look at the current.
-
-print(current)
-
-# %%
-# As you can see, it's an object called a Tsd (TimeSeriesData) with 2 columns. The first column indicates time and the second column is the current in Ampere.
-# A key point of pynapple is that objects can interact. In this case, we want to restrict the current (Tsd) to the noise_interval epochs (IntervalSet). Notice how the timestamps are changing.
-current.restrict(noise_interval)
-
-# %%
-# The third object we are interacting with is the TsGroup for a group of timestamps. This is typically, a population of neurons. In this case we have only one neuron so there is only one row.
-
-print(spikes)
-
-# %%
-# TsGroup is a dictionnary. You can look at the spike times of neuron by indexing it.
-print(spikes[1])
-
-# %%
-# For the rest of the notebook, we are going to restrict the data to the first of epoch of Noise1.
+#
+# As described above, we will be examining "Noise 1". We can see it contains
+# three rows, each defining a separate sweep. We'll just grab the first sweep
+# (shown in blue in the pictures above) and ignore the other two (shown in
+# gray).
+#
+# To select only one epoch from an IntervalSet, use 2 square brackets:
 
 noise_interval = noise_interval.loc[[0]]
-spikes = spikes.restrict(noise_interval)
+noise_interval
+
+# %%
+#
+# Now let's examine `current`:
+
+current
+
+# %%
+#
+# `current` is a `Tsd`
+# ([TimeSeriesData](https://pynapple-org.github.io/pynapple/reference/core/time_series/))
+# object with 2 columns. Like all `Tsd` objects, the first column contains the
+# time index and the second column contains the data; in this case, the current
+# in pA.
+#
+# Currently `current` contains the entire ~900 second experiment but, as
+# discussed above, we only want one of the Noise 1 sweeps. Fortunately,
+# `pynapple` makes it easy to grab out the relevant time points by making use
+# of the `noise_interval` we defined above:
 current = current.restrict(noise_interval)
+current
+
+# %%
+#
+# Notice that the timestamps have changed and our shape is much smaller.
+#
+# Finally, let's examine the spike times. `spikes` is a
+# [`TsGroup`](https://pynapple-org.github.io/pynapple/reference/core/ts_group/),
+# a dictionary-like object that holds multiple `Ts` (timeseries) objects with
+# potentially different time index:
+
+spikes
+
+# %%
+#
+# Typically, this is used to hold onto the spike times for a population of
+# neurons. In this experiment, we only have recordings from a single neuron, so
+# there's only one row.
+#
+# We can index into the `TsGroup` to see the timestamps for this neuron's
+# spikes:
+spikes[1]
+
+# %%
+#
+# Similar to `current`, this object originally contains data from the entire
+# experiment. To get only the data we need, we again use
+# `restrict(noise_interval)`:
+
+spikes = spikes.restrict(noise_interval)
+spikes
 
 
 # %%
-# Now we can visualize for the first epoch of `noise_interval` all the data together.
+#
+# Now, let's visualize the data from this trial, replicating rows 1 and 3
+# from the Allen Brain Atlas figure at the beginning of this notebook:
 
 fig, ax = plt.subplots(1, 1, figsize=(12,4))
 ax.plot(current, "grey")
 ax.plot(spikes.to_tsd([-5]), "|", color="k", ms = 10)
 ax.set_ylabel("Current (pA)")
 ax.set_xlabel("Time (s)")
-plt.show()
 
 # %%
-# Pynapple can compute a tuning curve (i.e. firing rate as a function of feature). Here the feature is the current.
-# In pynapple, it's one line. In this case, we compute the firing rate over 15 bins over the range of the current.
-tuning_curve = nap.compute_1d_tuning_curves(spikes, current, 15)
+#
+# ### Basic analyses
+#
+# Before using the Generalized Linear Model, or any model, it's worth taking
+# some time to examine our data and think about what features are interesting
+# and worth capturing. As we discussed in tutorial 0, the GLM is a model of the
+# neuronal firing rate. However, in our experiments, we do not observe the
+# firing rate, only the spikes! Even worse, the spikes are the output of a
+# stochastic process, so running the exact same experiment multiple times will
+# lead to slightly different spike times. This means that no model can
+# perfectly predict spike times. So how do we tell if our model is doing a good
+# job?
+#
+# Our objective function is the log-likelihood of the observed spikes given the
+# predicted firing rate. That is, we're trying to find the firing rate, as a
+# function of time, for which the observed spikes are likely. Intuitively, this
+# makes sense: the firing rate should be high where there are many spikes, and
+# vice versa. However, it can be difficult to figure out if your model is doing
+# a good job by squinting at the observed spikes and the predicted firing rates
+# plotted together. We'd like to compare the predicted firing rates against the
+# observed ones, so we'll have to approximate the firing rate from the data in
+# a model-free way.
+#
+# One common way of doing this is to smooth the spikes, convolving them with a
+# Gaussian filter. This is equivalent to taking the local average of the number
+# of spikes, with the size of the Gaussian determining the size of the
+# averaging window. This approximate firing rate can then be compared to our
+# model's predictions, in order to visualize its performance.
+#
+# !!! info
+#
+#     This is a heuristic for getting the firing rate, and shouldn't be taken
+#     as the literal truth (to see why, pass a firing rate through a Poisson
+#     process to generate spikes and then smooth the output to approximate the
+#     generating firing rate). A model should not be expected to match this
+#     approximate firing rate exactly, but visualizing the two firing rates
+#     together can help you reason about which phenomena in your data the model
+#     is able to adequately capture, and which it is missing.
+#
+#     For more information, see section 1.2 of [*Theoretical
+#     Neuroscience*](https://boulderschool.yale.edu/sites/default/files/files/DayanAbbott.pdf),
+#     by Dayan and Abbott.
+#
+# Pynapple can easily compute this approximate firing rate, and plotting this
+# information will help us pull out some phenomena that we think are
+# interesting and would like a model to capture.
+#
+# First, we must convert from our spike times to binned spikes:
 
-print(tuning_curve)
+# bin size in seconds
+bin_size = 0.001
+count = spikes.count(bin_size)
+count
 
 # %%
-# In this case tuning_curve is a pandas DataFrame where each column is a neuron (one neuron in this case) and each row is a bin over the feature. We can plot the tuning curve of the neuron.
+#
+# Now, let's convert the binned spikes into the firing rate, by smoothing them
+# with a gaussian kernel. Pynapple provides a convenience function for this:
+
+# the argument to this method are the standard deviation of the gaussian and
+# the full width of the window, given in bins. So std=50 corresponds to a
+# standard deviation of 50*.001=.05 seconds
+firing_rate = count.smooth(std=50, size=1000)
+# convert from spikes per bin to spikes per second (Hz)
+firing_rate = firing_rate / bin_size
+
+# %%
+#
+# Note that this changes the object's type to a
+# [`TsdFrame`](https://pynapple-org.github.io/pynapple/reference/core/time_series/)!
+print(type(firing_rate))
+
+# %%
+# Now let's make a plot to more easily visualize the data:
+
+# we're hiding the details of the plotting function for the purposes of this
+# tutorial, but you can find it in the associated github repo if you're
+# interested:
+# https://github.com/flatironinstitute/nemos-workshop-feb-2024/blob/main/docs/examples/utils/plotting.py
+utils.plotting.current_injection_plot(current, spikes, firing_rate)
+
+# %%
+# !!! warning
+#     clean up plot some
+#
+# So now that we can view the details of our experiment a little more clearly,
+# what do we see?
+#
+# - We have three intervals of increasing current, and the firing rate
+#   increases as the current does.
+#
+# - While the neuron is receiving the input, it does not fire continuously or
+#   at a steady rate; there appears to be some periodicity in the response. The
+#   neuron fires for a while, stops, and then starts again. There's periodicity
+#   in the input as well, so this pattern in the repsonse might be reflecting
+#   that.
+#
+# - There's some decay in firing rate as the input remains on: there are three
+#   four "bumps" of neuronal firing in the second and third intervals, and the
+#   first is always the largest.
+#
+# These give us some good phenomena to try and predict! But there's something
+# that's not quite obvious from the above plot: what is the relationship
+# between the input and the firing rate? As described in the first bullet point
+# above, it looks to be *monotonically increasing*: as the current increases,
+# so does the firing rate. But is that exactly true? What form is that
+# relationship?
+#
+# Pynapple can compute a tuning curve to help us answer this question, by
+# binning our spikes based on the instantaneous input current and computing the
+# firing rate within those bins:
+
+tuning_curve = nap.compute_1d_tuning_curves(spikes, current, nb_bins=15)
+tuning_curve
+
+# %%
+#
+# `tuning_curve` is a pandas DataFrame where each column is a neuron (one
+# neuron in this case) and each row is a bin over the feature (here, the input
+# current). We can easily plot the tuning curve of the neuron:
 
 fig, ax = plt.subplots(1, 1)
 tc_idx = tuning_curve.index.to_numpy()
@@ -131,76 +342,24 @@ tc_val = tuning_curve.values.flatten()
 width = tc_idx[1]-tc_idx[0]
 ax.bar(tc_idx, tc_val, width, facecolor="grey", edgecolor="k", label="observed", alpha=0.4)
 ax.set_xlabel("Current (pA)")
-ax.set_ylabel("Firing rate (Hz)")
-plt.show()
+# swallow the output of this line
+_=ax.set_ylabel("Firing rate (Hz)")
 
 # %%
-# We will try to capture this behavior with our GLM model that models spike counts. To fit a GLM model, you need to count the spikes within a particular bin size. You can do the spike count in pynapple in one line.
-
-# bin size in seconds
-bin_size = 0.001
-count = spikes.count(bin_size, ep=noise_interval)
-
-print(count)
-
-# %%
-# The GLM model is going to predict a firing rate. To be able to compare the output, we can compute the neuron firing rate.
-firing_rate = count.smooth(50, 1000) / bin_size
+#
+# We can see that, while the firing rate mostly increases with the current,
+# it's definitely not a linear relationship, and it might start decreasing as
+# the current gets too large.
+#
+# So this gives us three interesting phenomena we'd like our model to help
+# explain: the tuning curve between the firing rate and the current, the firing
+# rate's periodicity, and the gradual reduction in firing rate while the
+# current remains on.
 
 # %%
-# Let"s plot the firing rate against the spike times.
-ex_intervals = current.threshold(0.0).time_support
-
-
-# define plotting parameters
-# colormap, color levels and transparency level
-# for the current injection epochs
-cmap = plt.get_cmap("autumn")
-color_levs = [0.8, 0.5, 0.2]
-alpha = 0.4
-
-fig = plt.figure()
-# first row subplot: current
-ax = plt.subplot2grid((3, 3), loc=(0, 0), rowspan=1, colspan=3, fig=fig)
-ax.plot(current, color="grey")
-ax.set_ylabel("Current (pA)")
-ax.set_title("Injected Current")
-ax.axvspan(ex_intervals.loc[1,"start"], ex_intervals.loc[1,"end"], alpha=alpha, color=cmap(color_levs[0]))
-ax.axvspan(ex_intervals.loc[2,"start"], ex_intervals.loc[2,"end"], alpha=alpha, color=cmap(color_levs[1]))
-ax.axvspan(ex_intervals.loc[3,"start"], ex_intervals.loc[3,"end"], alpha=alpha, color=cmap(color_levs[2]))
-
-# second row subplot: response
-ax = plt.subplot2grid((3, 3), loc=(1, 0), rowspan=1, colspan=3, fig=fig)
-ax.plot(firing_rate, color="k")
-ax.plot(spikes.to_tsd([-1.5]), "|", color="k", ms=10)
-ax.set_ylabel("Firing rate (Hz)")
-ax.set_xlabel("Time (s)")
-ax.set_title("Response")
-ax.axvspan(ex_intervals.loc[1,"start"], ex_intervals.loc[1,"end"], alpha=alpha, color=cmap(color_levs[0]))
-ax.axvspan(ex_intervals.loc[2,"start"], ex_intervals.loc[2,"end"], alpha=alpha, color=cmap(color_levs[1]))
-ax.axvspan(ex_intervals.loc[3,"start"], ex_intervals.loc[3,"end"], alpha=alpha, color=cmap(color_levs[2]))
-ylim = ax.get_ylim()
-
-# third subplot: zoomed responses
-for i in range(len(ex_intervals)-1):
-    interval = ex_intervals.loc[[i+1]]
-    ax = plt.subplot2grid((3, 3), loc=(2, i), rowspan=1, colspan=1, fig=fig)
-    ax.plot(firing_rate.restrict(interval), color="k")
-    ax.plot(spikes.restrict(interval).to_tsd([-1.5]), "|", color="k", ms=10)
-    ax.set_ylabel("Firing rate (Hz)")
-    ax.set_xlabel("Time (s)")
-    ax.set_ylim(ylim)
-    for spine in ["left", "right", "top", "bottom"]:
-        color = cmap(color_levs[i])
-        # add transparency
-        color = (*color[:-1], alpha)
-        ax.spines[spine].set_color(color)
-        ax.spines[spine].set_linewidth(2)
-
-plt.tight_layout()
-
-# %%
-# ##NEMOS
+# ## Nemos
+#
+# Now that we've sufficiently explored our data, let's start modeling!
 #
 # We picked a trial with some simple current injection, and we can see that
 # injecting current leads to increased firing rate.
@@ -362,61 +521,61 @@ smooth_predicted_fr = predicted_fr.smooth(50, 1000)
 print(f"Observed mean firing rate: {np.mean(count) / bin_size} Hz")
 print(f"Predicted mean firing rate: {np.mean(predicted_fr)} Hz")
 
-fig = plt.figure()
-# first row subplot: current
-ax = plt.subplot2grid((3, 3), loc=(0, 0), rowspan=1, colspan=3, fig=fig)
-ax.plot(current, color="grey")
-ax.set_ylabel("Current (pA)")
-ax.set_title("Injected Current")
-ax.axvspan(ex_intervals.loc[1, "start"], ex_intervals.loc[1, "end"], alpha=alpha, color=cmap(color_levs[0]))
-ax.axvspan(ex_intervals.loc[2, "start"], ex_intervals.loc[2, "end"], alpha=alpha, color=cmap(color_levs[1]))
-ax.axvspan(ex_intervals.loc[3, "start"], ex_intervals.loc[3, "end"], alpha=alpha, color=cmap(color_levs[2]))
+# fig = plt.figure()
+# # first row subplot: current
+# ax = plt.subplot2grid((3, 3), loc=(0, 0), rowspan=1, colspan=3, fig=fig)
+# ax.plot(current, color="grey")
+# ax.set_ylabel("Current (pA)")
+# ax.set_title("Injected Current")
+# ax.axvspan(ex_intervals.loc[1, "start"], ex_intervals.loc[1, "end"], alpha=alpha, color=cmap(color_levs[0]))
+# ax.axvspan(ex_intervals.loc[2, "start"], ex_intervals.loc[2, "end"], alpha=alpha, color=cmap(color_levs[1]))
+# ax.axvspan(ex_intervals.loc[3, "start"], ex_intervals.loc[3, "end"], alpha=alpha, color=cmap(color_levs[2]))
 
-# second row subplot: response
-ax = plt.subplot2grid((3, 3), loc=(1, 0), rowspan=1, colspan=3, fig=fig)
-ax.plot(firing_rate, color="k", label="observed")
-ax.plot(smooth_predicted_fr, color="tomato", label="glm")
-ax.plot(spikes.to_tsd([-1.5]), "|", color="k", ms=10)
-ax.set_ylabel("Firing rate (Hz)")
-ax.set_xlabel("Time (s)")
-ax.set_title("Response")
-ax.legend()
-ax.axvspan(ex_intervals.loc[1, "start"], ex_intervals.loc[1, "end"], alpha=alpha, color=cmap(color_levs[0]))
-ax.axvspan(ex_intervals.loc[2, "start"], ex_intervals.loc[2, "end"], alpha=alpha, color=cmap(color_levs[1]))
-ax.axvspan(ex_intervals.loc[3, "start"], ex_intervals.loc[3, "end"], alpha=alpha, color=cmap(color_levs[2]))
-ylim = ax.get_ylim()
+# # second row subplot: response
+# ax = plt.subplot2grid((3, 3), loc=(1, 0), rowspan=1, colspan=3, fig=fig)
+# ax.plot(firing_rate, color="k", label="observed")
+# ax.plot(smooth_predicted_fr, color="tomato", label="glm")
+# ax.plot(spikes.to_tsd([-1.5]), "|", color="k", ms=10)
+# ax.set_ylabel("Firing rate (Hz)")
+# ax.set_xlabel("Time (s)")
+# ax.set_title("Response")
+# ax.legend()
+# ax.axvspan(ex_intervals.loc[1, "start"], ex_intervals.loc[1, "end"], alpha=alpha, color=cmap(color_levs[0]))
+# ax.axvspan(ex_intervals.loc[2, "start"], ex_intervals.loc[2, "end"], alpha=alpha, color=cmap(color_levs[1]))
+# ax.axvspan(ex_intervals.loc[3, "start"], ex_intervals.loc[3, "end"], alpha=alpha, color=cmap(color_levs[2]))
+# ylim = ax.get_ylim()
 
-# third subplot: zoomed responses
-for i in range(len(ex_intervals)-1):
-    interval = ex_intervals.loc[[i+1]]
-    ax = plt.subplot2grid((3, 3), loc=(2, i), rowspan=1, colspan=1, fig=fig)
-    ax.plot(firing_rate.restrict(interval), color="k")
-    ax.plot(smooth_predicted_fr.restrict(interval), color="tomato")
-    ax.plot(spikes.restrict(interval).to_tsd([-1.5]), "|", color="k", ms=10)
-    ax.set_ylabel("Firing rate (Hz)")
-    ax.set_xlabel("Time (s)")
-    #ax.set_ylim(ylim)
-    for spine in ["left", "right", "top", "bottom"]:
-        color = cmap(color_levs[i])
-        # add transparency
-        color = (*color[:-1], alpha)
-        ax.spines[spine].set_color(color)
-        ax.spines[spine].set_linewidth(2)
+# # third subplot: zoomed responses
+# for i in range(len(ex_intervals)-1):
+#     interval = ex_intervals.loc[[i+1]]
+#     ax = plt.subplot2grid((3, 3), loc=(2, i), rowspan=1, colspan=1, fig=fig)
+#     ax.plot(firing_rate.restrict(interval), color="k")
+#     ax.plot(smooth_predicted_fr.restrict(interval), color="tomato")
+#     ax.plot(spikes.restrict(interval).to_tsd([-1.5]), "|", color="k", ms=10)
+#     ax.set_ylabel("Firing rate (Hz)")
+#     ax.set_xlabel("Time (s)")
+#     #ax.set_ylim(ylim)
+#     for spine in ["left", "right", "top", "bottom"]:
+#         color = cmap(color_levs[i])
+#         # add transparency
+#         color = (*color[:-1], alpha)
+#         ax.spines[spine].set_color(color)
+#         ax.spines[spine].set_linewidth(2)
 
-plt.tight_layout()
+# plt.tight_layout()
 
-# We can compare the tuning curves
-tuning_curve_model = nap.compute_1d_tuning_curves_continuous(predicted_fr, current, 15)
+# # We can compare the tuning curves
+# tuning_curve_model = nap.compute_1d_tuning_curves_continuous(predicted_fr, current, 15)
 
-plt.figure()
-tc_idx = tuning_curve.index.to_numpy()
-tc_val = tuning_curve.values.flatten()
-width = tc_idx[1]-tc_idx[0]
-plt.bar(tc_idx, tc_val, width, facecolor="grey", edgecolor="k", label="observed", alpha=0.4)
-plt.plot(tuning_curve_model, color="tomato", label="glm")
-plt.ylabel("Firing rate (Hz)")
-plt.xlabel("Current (pA)")
-plt.legend()
+# plt.figure()
+# tc_idx = tuning_curve.index.to_numpy()
+# tc_val = tuning_curve.values.flatten()
+# width = tc_idx[1]-tc_idx[0]
+# plt.bar(tc_idx, tc_val, width, facecolor="grey", edgecolor="k", label="observed", alpha=0.4)
+# plt.plot(tuning_curve_model, color="tomato", label="glm")
+# plt.ylabel("Firing rate (Hz)")
+# plt.xlabel("Current (pA)")
+# plt.legend()
 
 
 # pred_fr = nap.TsdFrame(binned_current.t, np.array(pred_fr))
