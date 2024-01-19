@@ -299,6 +299,7 @@ for idx, weight in enumerate(np.transpose(weights, (2, 0, 1))):
 
 plt.tight_layout()
 
-
+# %%
+# What would happen if we regressed explicitly the head direction?
 
 
