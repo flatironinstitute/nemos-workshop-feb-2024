@@ -207,6 +207,11 @@ plt.plot(eval_basis)
 compressed_features = np.squeeze(input_feature) @ eval_basis[::-1]
 compressed_features = nap.TsdFrame(t=count[window_size:].t, d=compressed_features)
 
+# compare dimensionality of features
+print(f"Raw count history as feature: {np.squeeze(input_feature).shape}")
+print(f"Compressed count history as feature: {np.squeeze(compressed_features).shape}")
+
+
 interval = nap.IntervalSet(8820.4, 8821)
 
 plt.figure()
@@ -243,35 +248,27 @@ plt.title("spike history weights")
 plt.plot(model.coef_.flatten()[::-1])
 plt.plot(eval_basis @ model_basis.coef_.flatten())
 
+# compare model scores
+print(f"full history score: {model.score(input_feature, neuron_count[window_size:, None])}")
+print(f"basis score: {model_basis.score(conv_spk, neuron_count[window_size:, None])}")
+
 # %%
-# We also want to introduce some time lag. We can use the basis of Nemos for this.
-# create three filters
-window_size = 30
-basis_obj = nmo.basis.RaisedCosineBasisLog(n_basis_funcs=4)
-_, eval_basis = basis_obj.evaluate_on_grid(window_size)
+# The same approach can be applied to the whole population. Now the firing rate of a neuron
+# is predicted not only on the basis of its own firing history, but also that of the
+# rest simultaneously recorded population.
+_, eval_basis = basis.evaluate_on_grid(window_size)
 
 fig, ax = plt.subplots(1, 1, figsize=(12,4))
 ax.plot(eval_basis)
 plt.tight_layout()
 
 # %%
-# Do the convolution
+# Perform the convolution over the whole population (23 neurons)
 convolved_count = nmo.utils.convolve_1d_trials(eval_basis, [count.values])[0]
 
 # %%
 # Check the dimension to make sure it make sense
 print(convolved_count.shape)
-
-# convolved_count = convolved_count
-
-# %%
-# Notice the difference in size. To go back to pynapple, you need padding blabla
-#padded_conv = np.asarray(nmo.utils.nan_pad_conv(convolved_count, ws, filter_type="causal")[0])
-
-# %% 
-# Now you can put the convoluted activity of the first neuron in a TsdFrame :
-#padded_conv_0 = nap.TsdFrame(t=count.t, d=padded_conv[:,0,:])
-
 
 # %%
 # Build the right feature matrix
@@ -293,20 +290,14 @@ weights = weights.reshape(len(spikes), len(spikes), -1)
 # 
 # Try to plot the glm coupling weights. What do you see?
 
-fig, axs = plt.subplots(1, 4, figsize=(12,4))
-axs[0].imshow(weights[..., 0])
-axs[0].set_xlabel("Weights")
-axs[0].set_ylabel("Neurons")
-axs[1].imshow(weights[..., 1])
-axs[1].set_xlabel("Weights")
-axs[1].set_ylabel("Neurons")
-axs[2].imshow(weights[..., 2])
-axs[2].set_xlabel("Weights")
-axs[2].set_ylabel("Neurons")
-axs[3].imshow(weights[..., 3])
-axs[3].set_xlabel("Weights")
-axs[3].set_ylabel("Neurons")
+fig, axs = plt.subplots(2, 5, figsize=(12,4))
+for idx, weight in enumerate(np.transpose(weights, (2, 0, 1))):
+    row, col = np.unravel_index(idx, (2, 5))
+    axs[row, col].imshow(weight)
+    axs[row, col].set_xlabel("Weights")
+    axs[row, col].set_ylabel("Neurons")
 
+plt.tight_layout()
 
 # %%
 # We can compute the L2 integral norm under the filter squared $f(t)^2$, using the basis
