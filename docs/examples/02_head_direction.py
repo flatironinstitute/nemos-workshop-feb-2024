@@ -292,7 +292,7 @@ weights = weights.reshape(len(spikes), len(spikes), -1)
 
 fig, axs = plt.subplots(2, 5, figsize=(12,4))
 for idx, weight in enumerate(np.transpose(weights, (2, 0, 1))):
-    row, col = np.unravel_index(idx, (2, 5))
+    row, col = np.unravel_index(idx, axs.shape)
     axs[row, col].imshow(weight)
     axs[row, col].set_xlabel("Weights")
     axs[row, col].set_ylabel("Neurons")
