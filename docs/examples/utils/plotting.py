@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pynapple as nap
 
 
 def current_injection_plot(current: nap.Tsd, spikes: nap.TsGroup,
                            firing_rate: nap.TsdFrame):
     ex_intervals = current.threshold(0.0).time_support
-
 
     # define plotting parameters
     # colormap, color levels and transparency level
@@ -55,3 +55,13 @@ def current_injection_plot(current: nap.Tsd, spikes: nap.TsGroup,
             ax.spines[spine].set_linewidth(2)
 
     plt.tight_layout()
+
+
+def lnp_schematic(input_feature: nap.Tsd,
+                  weights: np.ndarray,
+                  intercept: np.ndarray):
+    """
+    """
+    fig, axes = plt.subplots(3, 4, sharex=True, sharey=True,
+                             layout="constrained",
+                             gridspec_kw={'wspace': .2})

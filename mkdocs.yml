@@ -21,6 +21,10 @@ plugins:
           # path to the directory where mkdocs will save the generated output
           gallery_dirs: docs/generated/gallery
 
+markdown_extensions:
+  - attr_list
+  - md_in_html
+
 extra_javascript:
   - javascripts/katex.js
   - https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.7/katex.min.js

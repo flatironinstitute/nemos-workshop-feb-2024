@@ -359,20 +359,89 @@ _=ax.set_ylabel("Firing rate (Hz)")
 # %%
 # ## Nemos
 #
-# Now that we've sufficiently explored our data, let's start modeling!
+# Now that we've sufficiently explored our data, let's start modeling our
+# spikes! How should we begin?
 #
-# We picked a trial with some simple current injection, and we can see that
-# injecting current leads to increased firing rate.
+# When modeling, it's generally a good idea to start simple and add complexity
+# as needed. Simple models are:
 #
-# Initial impulse then is that this is all we need! let's fit a simple model
-# that only takes the injected current as input. Using this model is equivalent
-# to saying "the only thing that influences the firing rate of the neuron is
-# whether it receives a current injection." (As neuroscientists, we know this
-# isn't true, but it does look reasonable from the data above! We'll build in
-# complications later.)
+# - Easier to understand, so you can more easily reason through why a model is
+#   capturing or not capturing some feature of your data.
+#
+# - Easier to fit, so you can more quickly see how you did.
+#
+# - Surprisingly powerful, so you might not actually need all the bells and
+#   whistles you expected.
+#
+# Therefore, let's start with the simplest possible model: the only input is
+# the instantaneous injected current. This is equivalent to saying that the
+# only input influencing the firing rate of this neuron at time $t$ is current
+# it received at that same time. As neuroscientists, we know this isn't exactly
+# true, but given the data exploration we did above, it looks like a reasonable
+# starting place. We can always build in more complications later.
+#
+# ### GLM components
+#
+# As described in tutorial 0, the Generalized Linear Model in neuroscience can
+# also be thought of as a LNP model: a linear-nonlinear-Poisson model.
+#
+# <figure markdown>
+# <!-- note that the src here has an extra ../ compared to other images, necessary when specifying path directly in html -->
+# <img src="../../../assets/lnp_model.svg" style="width: 100%"/>
+# <figcaption>LNP model schematic. Modified from Pillow et al., 2008.</figcaption>
+# </figure>
+#
+# The model receives some input and then:
+#
+# - sends it through a linear filter or transformation of some sort.
+# - passes that through a nonlinearity to get the *firing rate*.
+# - uses the firing rate as the mean of a Poisson process to generate *spikes*.
+#
+# Let's step through each of those in turn:
+#
+# #### Linear transformation of input
+#
+# Our input feature(s) are first passed through a linear transformation, which
+# rescales and shifts the input: $\bm{WX}+c$. In the one-dimensional case, as
+# in this examine, this is equivalent to scaling it by a constant and adding an
+# intercept: $w\dot x + c$.
+#
+# !!! note
+#
+#     In geometry, this is more correctly referred to as an [affine
+#     transformation](https://en.wikipedia.org/wiki/Affine_transformation),
+#     which includes translations, scaling, and rotations. *Linear*
+#     transformations are the subset of affine transformations that do not
+#     include translations.
+#
+#     In neuroscience, "linear" is the more common term, and we will use it
+#     throughout.
+#
+# This means that, in the 1d case, we have two knobs to transform the input: we
+# can make it bigger or smaller, or we can shift it up or down. Let's visualize
+# some possible transformations that our model can make:
+
+# to make this plot work well, keep this to three values
+w = np.asarray([0.05, 10, -2]).reshape(3, 1)
+c = np.asarray([0, -3, 1]).reshape(3, 1)
+
+# pick a small subset, so we can see what's going on
+plotting_interval = nap.IntervalSet(start=470.5, end=471.5)
+L = w * np.expand_dims(current.restrict(plotting_interval), 0) + c
+print(L.shape)
+
+plt.figure(figsize=(10, 3.5))
+ax = plt.subplot(1, 2, 1)
+ax.set_title("Current $i(t)$")
+ax.plot(current.restrict(plotting_interval), color="grey")
+ax.set_xlabel("Time (s)")
+ax = plt.subplot(1, 2, 2)
+ax.set_title("Linearly Transformed $L(t)$")
+ax.plot(L, color="orange")
+ax.set_xlabel("Time (s)")
+plt.tight_layout()
 
 # %%
-# In this most basic form, the model components will be the following:
 #
 # ### 1. Predictor & Observations
 # We are using the input current as the only predictor.
@@ -577,6 +646,8 @@ print(f"Predicted mean firing rate: {np.mean(predicted_fr)} Hz")
 # plt.xlabel("Current (pA)")
 # plt.legend()
 
+# %%
+# below this is old
 
 # pred_fr = nap.TsdFrame(binned_current.t, np.array(pred_fr))
 # # get the times of these simulated spikes
