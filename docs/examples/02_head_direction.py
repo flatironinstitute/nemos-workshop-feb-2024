@@ -8,8 +8,6 @@ C'est la vie
 
 import math
 import os
-import sys
-from typing import Optional
 
 import jax
 import matplotlib.pyplot as plt
@@ -51,22 +49,15 @@ angle = data["ry"]  # Get the tracked orientation of the animal
 wake_ep = data["epochs"]["wake"]
 
 # %%
-# To fit the GLM faster, we will use only the first 10 min of wake
-wake_ep = nap.IntervalSet(start=wake_ep.loc[0,'start'], end=wake_ep.loc[0,'start']+10*60)
-
-# %%
 # This cell will restrict the data to what we care about i.e. the activity of head-direction neurons during wakefulness.
 
-spikes = spikes.getby_category("location")["adn"].restrict(wake_ep).getby_threshold("rate", 1.0)  # Select only those units that are in ADn
-angle = angle.restrict(wake_ep)
+spikes = spikes.getby_category("location")["adn"].getby_threshold("rate", 1.0)  # Select only those units that are in ADn
 
-# %%
 # First let's check that they are head-direction neurons.
 tuning_curves = nap.compute_1d_tuning_curves(
-    group=spikes, 
+    group=spikes,
     feature=angle,
-    nb_bins=61, 
-    ep = wake_ep,
+    nb_bins=61,
     minmax=(0, 2 * np.pi)
     )
 
@@ -89,15 +80,13 @@ plt.tight_layout()
 # %% 
 # Before using Nemos, let's explore the data at the population level.
 
-ep = nap.IntervalSet(
-    start=10717, end=10730
-)  # Select an arbitrary interval for plotting
+# Let's compute the preferred angle quickly as follows.
+pref_ang = tuning_curves.idxmax()
 
-pref_ang = tuning_curves.idxmax() #Let's compute the preferred angle quickly as follows.
-
+plot_ep = nap.IntervalSet(8910, 8960)
 fig, ax = plt.subplots(1, 1, figsize=(12,4))
-ax.plot(spikes.restrict(ep).to_tsd(pref_ang), "|")
-ax.plot(angle.restrict(ep), label = "Animal's HD")
+ax.plot(spikes.restrict(plot_ep).to_tsd(pref_ang), "|")
+ax.plot(angle.restrict(plot_ep), label="Animal's HD")
 ax.set_xlabel("Time (s)")
 ax.set_ylabel("Angle (rad)")
 ax.legend()
@@ -106,6 +95,14 @@ plt.tight_layout()
 # %%
 # As we can see, the population activity tracks very well the current head-direction of the animal. 
 # **Question : can we predict the spiking activity of each neuron based only on the activity of other neurons?**
+
+# To fit the GLM faster, we will use only the first 10 min of wake
+wake_ep = nap.IntervalSet(start=wake_ep.loc[0,'start'], end=wake_ep.loc[0,'start']+3*60)
+spikes = spikes.restrict(wake_ep).getby_threshold("rate", 1.0)
+angle = angle.restrict(wake_ep)
+# throw away those neurons who had a low firing rate on the epoch we're
+# examining
+pref_ang = pref_ang[spikes.keys()]
 
 # %%
 # To use the GLM, we need first to bin the spike trains. Here we use pynapple
@@ -296,19 +293,10 @@ plt.ylabel("kernel")
 # In the GLM framework, tne main way to construct a lower dimensional filter (while preserving convexity), is
 # to use a set of basis functions. One such basis has precision decaying
 # linearly with time from spike, is using the log-raised cosine basis function.
-
-
+#
 # ## Basis introduction.
 #
-# We've seen what we can do with a super simple model, but how can we improve
-# it? Brainstorming possible inputs:
-#
-# - current at time t (currently done)
-# - spiking history
-# - current history
-# - more complicated function of current
-#
-# and any combination of the above
+# NEEDS TRANSITION
 #
 # How should we add something like spiking history? We could do the simple way:
 # treat time t, t-1, ... t-i, all as independent predictors, with a separate
@@ -343,83 +331,34 @@ plt.ylabel("kernel")
 # number of functions we want: with more basis functions, we'll be able to
 # represent the effect of the corresponding input with the higher precision, at
 # the cost of adding additional parameters.
-basis = nmo.basis.RaisedCosineBasisLog(10)
-# %%
-#
-# `basis.evaluate_on_grid` is a convenience method to view all basis functions
-# across their whole domain:
-time, basis_kernels = basis.evaluate_on_grid(250)
-plt.plot(time, basis_kernels)
-# %%
-#
-# For history-related inputs, we need to convolve them with the basis functions
-# in order to generate our inputs
-#
-# !!! warning
-#     WHYWHYWHY
-#
-# ## Basis introduction.
-#
-# We've seen what we can do with a super simple model, but how can we improve
-# it? Brainstorming possible inputs:
-#
-# - current at time t (currently done)
-# - spiking history
-# - current history
-# - more complicated function of current
-#
-# and any combination of the above
-#
-# How should we add something like spiking history? We could do the simple way:
-# treat time t, t-1, ... t-i, all as independent predictors, with a separate
-# weight on each one. That feels pretty weird -- that's a whole lot of weights
-# and it's odd to treat each of them as independent predictors.
-#
-# Instead, what is typically done in the GLM framework is to use a set of basis
-# functions. Why? Remember in tutorial 0: basis functions allow us to create a
-# relatively low-dimensional representation that captures relevant properties
-# of our feature while keeping the problem convex. that's pretty nifty.
-#
-# nemos includes `Basis` objects to handle the construction and use of these
-# basis functions.
-#
-# !!! info
-#
-#     We provide a handful of different choices for basis functions, and
-#     selecting the proper basis function for your input is an important
-#     analytical step. We will eventually provide guidance on this choice, but
-#     for now we'll give you a decent choice.
-#
-# ### History-related inputs
-# For history-type inputs, whether of the spiking history or of the current
-# history, we'll use the raised cosine log-stretched basis first described in
-# [Pillow et al., 2005](https://www.jneurosci.org/content/25/47/11003). This
-# basis set has the nice property that their precision drops linearly with
-# distance from event, which is a nice property for many history-related inputs
-# in neuroscience: whether an input happened 1 or 5 msec ago matters a lot,
-# whereas whether an input happened 51 or 55 msec ago is less important.
-#
-# When we instantiate this object, the only argument we need to specify is the
-# number of functions we want: with more basis functions, we'll be able to
-# represent the effect of the corresponding input with the higher precision, at
-# the cost of adding additional parameters.
-basis = nmo.basis.RaisedCosineBasisLog(10)
-# %%
-#
-# `basis.evaluate_on_grid` is a convenience method to view all basis functions
-# across their whole domain:
-time, basis_kernels = basis.evaluate_on_grid(250)
-plt.plot(time, basis_kernels)
-# %%
-#
-# For history-related inputs, we need to convolve them with the basis functions
-# in order to generate our inputs
-#
-# !!! warning
-#     WHYWHYWHY
-
-# define an eight dimensional basis
 basis = nmo.basis.RaisedCosineBasisLog(n_basis_funcs=8)
+# %%
+#
+# `basis.evaluate_on_grid` is a convenience method to view all basis functions
+# across their whole domain:
+time, basis_kernels = basis.evaluate_on_grid(250)
+plt.plot(time, basis_kernels)
+
+# %%
+#
+# The above plot is the response of each of the 8 basis functions to a single
+# pulse. This is known as the impulse response function, and is a useful way to
+# characterize linear systems like our basis objects.
+#
+# Our predictor previously was huge: every possible 100 time point chunk of the
+# data, for XXX total numbers. By using this basis set we can instead reduce
+# the predictor to 8 numbers for every 100 time point window for YYY total
+# numbers.
+#
+# We're approximating, the predicted firing rate will be comparable.
+#
+# - weights was 100 numbers
+# - now will be 8 numbers
+# - will be able to capture the main trend (exponential decay) without the noise
+#
+# We need to convolve  with the basis functions
+# in order to generate our inputs
+#
 
 # evaluate the basis to get a (window_sizd, n_basis_funcs) matrix
 eval_basis = basis.evaluate_on_grid(window_size)[1]
@@ -497,14 +436,17 @@ plt.tight_layout()
 # %%
 # Perform the convolution over the whole population (23 neurons)
 convolved_count = nmo.utils.convolve_1d_trials(eval_basis, [count.values])[0]
+convolved_count = convolved_count[:-1]
 
 # %%
 # Check the dimension to make sure it make sense
 print(convolved_count.shape)
 
 # %%
-# Build the right feature matrix
-use_tp = 50000
+#
+# Build the right feature matrix. explain why we do it this way: because this
+# is all-to-all connectivity with all 8 basis functions
+use_tp = 10000
 features = convolved_count.reshape(convolved_count.shape[0], -1)
 features = np.expand_dims(features[:use_tp], 1)
 features = np.repeat(features, len(spikes), 1)
