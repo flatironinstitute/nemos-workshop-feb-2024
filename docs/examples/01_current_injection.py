@@ -19,7 +19,7 @@ the experimentalists injected three pulses of current. The current is a square
 pulse multiplied by a sinusoid of a fixed frequency, with some random noise
 riding on top.
 
-![Allen Brain Atlas view of the data we will analyze.](/assets/allen_data.png)
+![Allen Brain Atlas view of the data we will analyze.](../../assets/allen_data.png)
 
 In the figure above (from the Allen Brain Atlas website), we see the
 approximately 22 second sweep, with the input current plotted in the first row,
@@ -105,7 +105,7 @@ print(data)
 # The dataset contains several different pynapple objects, which we discussed
 # earlier today. Let's see how these relate to the data we visualized above:
 #
-# ![Annotated view of the data we will analyze.](/assets/allen_data_annotated.gif)
+# ![Annotated view of the data we will analyze.](../../assets/allen_data_annotated.gif)
 # <!-- this gif created with the following imagemagick command: convert -layers OptimizePlus -delay 100 allen_data_annotated-units.svg allen_data_annotated-epochs.svg allen_data_annotated-stimulus.svg allen_data_annotated-response.svg -loop 0 allen_data_annotated.gif -->
 #
 # - `units`: timestamps of the neuron's spikes.
