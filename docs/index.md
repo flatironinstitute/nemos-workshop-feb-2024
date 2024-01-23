@@ -13,3 +13,23 @@ The workshop will run from 9am to 5pm at the Flatiron Institute Center for Compu
 For this workshop, please bring your own laptop. We will be working in jupyter notebooks on a Flatiron-hosted [binder](https://mybinder.readthedocs.io/en/latest/index.html) instance. This means that you do not need to install or download anything to your personal machine; everything will be hosted on the Flatiron cluster and everyone should have access to a GPU.
 
 In the week before the workshop, please visit [the link to the binder instance](https://binder.flatironinstitute.org/~wbroderick/nemos) to see if you have access. You will have to log in with your google account (the one you registered with). If you get a 403 Forbidden error, make sure you selected the right google account and, if so, let Billy know.
+
+## Introductory Remarks
+First of all, thank you to everyone for being here and for being the first alpha testers of Nemos. The aim of this workshop is to collect feedback on both the package and the tutorials, which will serve as teaching material and be integrated into our documentation.
+
+Was it easy to interact with Nemos objects? Is the documentation clear and understandable? Did it provide all the necessary information to set up your model and debug the code? Were the tutorials helpful? What can be improved? We welcome any feedback on your experience.
+
+This workshop is intended for theoretical and experimental neuroscientists who are familiar with Python and NumPy but may lack background knowledge in Generalized Linear Models (GLMs). It is organized into different sections, each centered around a specific tutorial in the form of an interactive notebook. Theory and exercises will be interleaved, aiming to be gradual and not overwhelming.
+
+We will start with "Tutorial 0," which should bring everyone up to speed with the GLM framework. Most of you will already be familiar with it, so if we manage to confuse you, that's valuable feedback and a concerning sign!
+
+Next, we will introduce various aspects of the package while analyzing real datasets from various neuroscience domains. The tutorials should feel incremental in terms of complexity and should cover most standard use cases. 
+
+By the end of the exercises, users should feel confident in setting up a GLM with Nemos on their own data and assessing fit quality.
+
+We will reserve some time to collect and discuss your feedback, and then we can call it a day and head out to the restaurant!
+
+Again, thank you all for participating.
+
+The CNS Data Scientists
+
