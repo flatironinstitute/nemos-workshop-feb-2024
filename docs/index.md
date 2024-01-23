@@ -19,15 +19,15 @@ First of all, thank you to everyone for being here and for being the first alpha
 
 Was it easy to interact with Nemos objects? Is the documentation clear and understandable? Did it provide all the necessary information to set up your model and debug the code? Were the tutorials helpful? What can be improved? We welcome any feedback on your experience.
 
-This workshop is intended for theoretical and experimental neuroscientists who are familiar with Python and NumPy but may lack background knowledge in Generalized Linear Models (GLMs). It is organized into different sections, each centered around a specific tutorial in the form of an interactive notebook. Theory and exercises will be interleaved, aiming to be gradual and not overwhelming.
+This workshop is intended for theoretical and experimental neuroscientists who are familiar with Python and NumPy but may lack background knowledge in Generalized Linear Models (GLMs). It is organized into different sections, each lasting approximately one hour and centered around a specific tutorial in the form of an interactive notebook. Theory and exercises will be interleaved, aiming to be gradual and not overwhelming.
 
-We will start with "Tutorial 0," which should bring everyone up to speed with the GLM framework. Most of you will already be familiar with it, so if we manage to confuse you, that's valuable feedback and a concerning sign!
+We will start with a "Tutorial 0", which should bring everyone up to speed with the GLM framework and with time series manipulations through the "Pynapple" package. Most of you will already be familiar with it, so if we manage to confuse you, that's valuable feedback and a concerning sign!
 
 Next, we will introduce various aspects of the package while analyzing real datasets from various neuroscience domains. The tutorials should feel incremental in terms of complexity and should cover most standard use cases. 
 
 By the end of the exercises, users should feel confident in setting up a GLM with Nemos on their own data and assessing fit quality.
 
-We will reserve some time to collect and discuss your feedback, and then we can call it a day and head out to the restaurant!
+We will reserve some time between 4:30pm and 5pm to collect and discuss your feedback, and then we can call it a day and head out to the restaurant!
 
 Again, thank you all for participating.
 
