@@ -38,7 +38,7 @@ if os.path.basename(path) not in os.listdir(os.getcwd()):
 
 # %%
 # ## PYNAPPLE
-# We are gonna open the NWB file with pynapple
+# We are going to open the NWB file with pynapple
 # Since pynapple has been covered in tutorial 0, we are going faster here.
 
 data = nap.load_file(path)
@@ -80,28 +80,22 @@ plt.tight_layout()
 # %% 
 # Before using Nemos, let's explore the data at the population level.
 
-# Let's compute the preferred angle quickly as follows.
-pref_ang = tuning_curves.idxmax()
-
-plot_ep = nap.IntervalSet(8910, 8960)
-fig, ax = plt.subplots(1, 1, figsize=(12,4))
-ax.plot(spikes.restrict(plot_ep).to_tsd(pref_ang), "|")
-ax.plot(angle.restrict(plot_ep), label="Animal's HD")
-ax.set_xlabel("Time (s)")
-ax.set_ylabel("Angle (rad)")
-ax.legend()
-plt.tight_layout()
+# Let's plot the preferred heading
+fig = utils.plotting.plot_head_direction_tuning(tuning_curves, spikes, angle, threshold_hz=1, start=8910, end=8960)
 
 # %%
 # As we can see, the population activity tracks very well the current head-direction of the animal. 
 # **Question : can we predict the spiking activity of each neuron based only on the activity of other neurons?**
 
 # To fit the GLM faster, we will use only the first 10 min of wake
-wake_ep = nap.IntervalSet(start=wake_ep.loc[0,'start'], end=wake_ep.loc[0,'start']+3*60)
+wake_ep = nap.IntervalSet(start=wake_ep.loc[0, 'start'], end=wake_ep.loc[0, 'start']+3*60)
+# Filter the spikes with at least 1hz Rate
 spikes = spikes.restrict(wake_ep).getby_threshold("rate", 1.0)
 angle = angle.restrict(wake_ep)
-# throw away those neurons who had a low firing rate on the epoch we're
-# examining
+
+# Compute the preferred angle
+pref_ang = tuning_curves.idxmax()
+# Throw away those neurons who had a low firing rate
 pref_ang = pref_ang[spikes.keys()]
 
 # %%
@@ -111,8 +105,7 @@ count = spikes.count(bin_size, ep=wake_ep)
 
 # %%
 # Here we are going to rearrange neurons order based on their prefered directions.
-
-count = nap.TsdFrame(t=count.t, d=count.values[:,pref_ang.reset_index(drop=True).sort_values().index.values])
+count = nap.TsdFrame(t=count.t, d=count.values[:, pref_ang.reset_index(drop=True).sort_values().index.values])
 
 
 # %%
@@ -142,14 +135,17 @@ plt.tight_layout()
 # select the predictor interval must end before the predicted count interval starts, we subtract an epsilon of 1ms
 # to enforce that
 
-# set the duration of the prediction window in sec
+# set the size of the prediction window in seconds
 prediction_window = 1
 
+# define the count history window used for prediction
 input_interval = nap.IntervalSet(
     start=interval["start"][0],
-    end=prediction_window+interval["start"][0] - 0.001
+    end=prediction_window + interval["start"][0] - 0.001
 )
-predicted_interval = nap.IntervalSet(
+
+# observed counts window (one bin_size after the count history window)
+observed_interval = nap.IntervalSet(
     start=prediction_window + interval["start"][0],
     end=prediction_window + interval["start"][0] + bin_size
 )
@@ -158,7 +154,7 @@ plt.figure(figsize=(8, 3.5))
 plt.step(neuron_count.restrict(interval).t, neuron_count.restrict(interval).d, where="post")
 ylim = plt.ylim()
 plt.axvspan(input_interval["start"][0], input_interval["end"][0], *ylim, alpha=0.4, color="orange", label="input")
-plt.axvspan(predicted_interval["start"][0], predicted_interval["end"][0], *ylim, alpha=0.4, color="tomato", label="predicted")
+plt.axvspan(observed_interval["start"][0], observed_interval["end"][0], *ylim, alpha=0.4, color="tomato", label="predicted")
 plt.ylim(ylim)
 plt.title("Spike Count Time Series")
 plt.xlabel("Time (sec)")
@@ -171,44 +167,14 @@ plt.tight_layout()
 # **mark the first one with a rectangle to show tha tit is the same
 # time course as the previous fig**
 n_shift = 20
-fig, axs = plt.subplots(n_shift, 1, figsize=(8, 8))
-for shift_bin in range(n_shift):
-    ax = axs[shift_bin]
-    shift_sec = shift_bin * bin_size
-    # select the first bin after one sec
-    input_interval = nap.IntervalSet(
-        start=interval["start"][0] + shift_sec,
-        end=prediction_window + interval["start"][0] + shift_sec - 0.001
-    )
-    predicted_interval = nap.IntervalSet(
-        start=prediction_window + interval["start"][0] + shift_sec,
-        end=prediction_window + interval["start"][0] + bin_size + shift_sec
-    )
-
-    ax.step(neuron_count.restrict(interval).t, neuron_count.restrict(interval).d, where="post")
-
-    ax.axvspan(
-        input_interval["start"][0],
-        input_interval["end"][0], *ylim, alpha=0.4, color="orange")
-    ax.axvspan(
-        predicted_interval["start"][0],
-        predicted_interval["end"][0], *ylim, alpha=0.4, color="tomato"
-    )
-
-    plt.ylim(ylim)
-    if shift_bin == 0:
-        ax.set_title("Spike Count Time Series")
-    elif shift_bin == n_shift-1:
-        ax.set_xlabel("Time (sec)")
-    if shift_bin != n_shift-1:
-        ax.set_xticks([])
-    ax.set_yticks([])
-    ax.spines['top'].set_visible(False)
-    ax.spines['bottom'].set_visible(False)
-    ax.spines['left'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-
-plt.tight_layout()
+utils.plotting.plot_count_history_window(
+    neuron_count,
+    n_shift,
+    prediction_window,
+    bin_size,
+    interval.start[0],
+    ylim
+)
 
 # %%
 # We can construct a predictor feature matrix by vertically stacking the "orange" chunks of spike history.
@@ -237,27 +203,9 @@ input_feature = np.asarray(input_feature[:-1])
 #
 # We can visualize the output for a few time bins
 
-plt.figure(figsize=(8, 8))
-plt.suptitle("Input feature: Count History")
-cmap = plt.get_cmap("Reds_r")
-
-for k in range(n_shift):
-    ax = plt.subplot(n_shift, 1, k + 1)
-    plt.step(np.arange(0, window_size)/count.rate, input_feature[k, 0], where="post")
-    ax.spines['top'].set_visible(False)
-    ax.spines['bottom'].set_visible(False)
-    ax.spines['left'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    ax.set_yticks([])
-    if k != n_shift-1:
-
-        ax.set_xticks([])
-    else:
-        ax.set_xlabel("lag (sec)")
-    if k in [0, n_shift - 1]:
-        ax.set_ylabel("$t_{%d}$" % (window_size+k), rotation=0)
-
-plt.tight_layout()
+suptitle = "Input feature: Count History"
+neuron_id = 0
+utils.plotting.plot_features(input_feature, neuron_id, count.rate, n_shift, window_size, suptitle)
 
 # %%
 # As you can see, the time axis is backward, this happens because convolution flips the time axis.
@@ -337,6 +285,7 @@ basis = nmo.basis.RaisedCosineBasisLog(n_basis_funcs=8)
 # `basis.evaluate_on_grid` is a convenience method to view all basis functions
 # across their whole domain:
 time, basis_kernels = basis.evaluate_on_grid(250)
+plt.figure()
 plt.plot(time, basis_kernels)
 
 # %%
