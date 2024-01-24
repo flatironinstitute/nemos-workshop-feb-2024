@@ -6,6 +6,7 @@ import pynapple as nap
 import numpy as np
 from numpy.typing import NDArray
 
+
 def set_two_y_axes_zeros_equal(ax1: plt.Axes, ax2: plt.Axes):
     """Changes ylims so that the zeros on two axes to occur at the same point.
 
@@ -92,19 +93,16 @@ def plot_head_direction_tuning(
     ax.set_title("Neural Activity")
     for i, ang in enumerate(unq_angles):
         sel = spike_tsd.d == ang
-        ax.plot(spike_tsd[sel].t, np.ones(sel.sum()) * i, "|", color=cmap(relative_color_levs[i]))
+        ax.plot(spike_tsd[sel].t, np.ones(sel.sum()) * i, "|", color=cmap(relative_color_levs[i]), alpha=0.5)
     ax.set_ylabel("Sorted Neurons")
     ax.set_xlabel("Time (s)")
-
-    for spine in ["top", "right"]:
-        ax.spines[spine].set_visible(False)
 
     for i, ang in enumerate(unq_angles):
         neu_idx = np.argsort(pref_ang.values)[i]
         ax = plt.subplot2grid((3, n_subplots), loc=(2 + i // n_subplots, i % n_subplots),
                               rowspan=1, colspan=1, fig=fig, projection="polar")
         ax.fill_between(tuning_curves.iloc[:, neu_idx].index, np.zeros(len(tuning_curves)),
-                        tuning_curves.iloc[:, neu_idx].values, color=cmap(relative_color_levs[i]))
+                        tuning_curves.iloc[:, neu_idx].values, color=cmap(relative_color_levs[i]), alpha=0.5)
         ax.set_xticks([])
         ax.set_yticks([])
     plt.tight_layout()
@@ -125,7 +123,7 @@ def plot_count_history_window(
     Parameters
     ----------
     counts:
-        The spike coints of a neuron.
+        The spike counts of a neuron.
     n_shift:
         Number of rolling windows to plot.
     history_window:
@@ -145,6 +143,7 @@ def plot_count_history_window(
     fig, axs = plt.subplots(n_shift, 1, figsize=(8, 8))
     for shift_bin in range(n_shift):
         ax = axs[shift_bin]
+
         shift_sec = shift_bin * bin_size
         # select the first bin after one sec
         input_interval = nap.IntervalSet(
@@ -174,10 +173,13 @@ def plot_count_history_window(
         if shift_bin != n_shift - 1:
             ax.set_xticks([])
         ax.set_yticks([])
-        ax.spines['top'].set_visible(False)
-        ax.spines['bottom'].set_visible(False)
-        ax.spines['left'].set_visible(False)
-        ax.spines['right'].set_visible(False)
+        if shift_bin == 0:
+            for spine in ["top", "right", "left", "bottom"]:
+                ax.spines[spine].set_color("tomato")
+                ax.spines[spine].set_linewidth(2)
+        else:
+            ax.spines['bottom'].set_visible(False)
+            ax.spines['left'].set_visible(False)
 
     plt.tight_layout()
     return fig
@@ -213,13 +215,15 @@ def plot_features(
     window_size = input_feature.shape[2]
     fig = plt.figure(figsize=(8, 8))
     plt.suptitle(suptitle)
+    time = np.arange(0, window_size) / sampling_rate
     for k in range(n_rows):
         ax = plt.subplot(n_rows, 1, k + 1)
-        plt.step(np.arange(0, window_size) / sampling_rate, input_feature[k, neuron_id], where="post")
-        ax.spines['top'].set_visible(False)
+        plt.step(time, input_feature[k, neuron_id], where="post")
+
         ax.spines['bottom'].set_visible(False)
         ax.spines['left'].set_visible(False)
-        ax.spines['right'].set_visible(False)
+
+        ax.axvspan(0, time[-1], alpha=0.4, color="orange")
         ax.set_yticks([])
         if k != n_rows - 1:
             ax.set_xticks([])
@@ -227,6 +231,59 @@ def plot_features(
             ax.set_xlabel("lag (sec)")
         if k in [0, n_rows - 1]:
             ax.set_ylabel("$t_{%d}$" % (window_size + k), rotation=0)
+
+    plt.tight_layout()
+    return fig
+
+
+def plot_weighted_sum_basis(time, weights, basis_kernels, basis_coeff):
+    """
+    Plot weighted sum of basis.
+
+    Parameters
+    ----------
+    time:
+        Time axis.
+    weights:
+        GLM fitted weights (num_neuron, window_size).
+    basis_kernels:
+        Basis kernels (window_size, num_basis_funcs).
+    basis_coeff:
+        The basis coefficients.
+
+    Returns
+    -------
+        The figure.
+
+    """
+    fig, axs = plt.subplots(1, 4, figsize=(12, 3))
+
+    axs[0].set_title("Basis")
+    lines = axs[0].plot(time, basis_kernels)
+    axs[0].set_xlabel("Time from spike (sec)")
+    axs[0].set_ylabel("a.u.")
+
+    colors = [p.get_color() for p in lines]
+
+    axs[1].set_title("Coefficients")
+    for k in range(len(basis_coeff)):
+        axs[1].bar([k], [basis_coeff[k]], width=1, color=colors[k])
+    axs[1].set_xticks([0, 7])
+    axs[1].set_xlabel("Basis ID")
+    axs[1].set_ylabel("Coefficient")
+
+    axs[2].set_title("Basis x Coefficients")
+    # flip time plot how a spike affects the future rate
+    for k in range(basis_kernels.shape[1]):
+        axs[2].plot(time, basis_kernels[:, k] * basis_coeff[k], color=colors[k])
+    axs[2].set_xlabel("Time from spike (sec)")
+    axs[2].set_ylabel("Weight")
+
+    axs[3].set_title("Approx. Weights")
+    axs[3].plot(time, np.squeeze(weights), alpha=0.3)
+    axs[3].plot(time, basis_kernels @ basis_coeff, "--k")
+    axs[3].set_xlabel("Time from spike (sec)")
+    axs[3].set_ylabel("Weight")
 
     plt.tight_layout()
     return fig
