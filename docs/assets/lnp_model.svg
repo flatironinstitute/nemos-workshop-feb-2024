@@ -23,16 +23,16 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="3.9307266"
-     inkscape:cx="118.42594"
-     inkscape:cy="87.770031"
+     inkscape:zoom="7.8614533"
+     inkscape:cx="119.12556"
+     inkscape:cy="55.33328"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
      units="px"
-     inkscape:window-width="1898"
-     inkscape:window-height="2080"
-     inkscape:window-x="2892"
+     inkscape:window-width="2852"
+     inkscape:window-height="1720"
+     inkscape:window-x="12"
      inkscape:window-y="64"
      inkscape:window-maximized="1"
      inkscape:document-rotation="0"
@@ -59,7 +59,7 @@
        d="m 109.48,249.11 h 101.071 v 53.242 H 109.48 Z"
        style="fill:#bdc2ca;fill-opacity:1;fill-rule:nonzero;stroke:none"
        id="path540"
-       transform="matrix(1.5616112,0,0,-1.208097,172.21402,788.69205)" />
+       transform="matrix(1.3685445,0,0,-1.208097,193.35097,788.69205)" />
     <path
        d="m 111.398,281.097 3.709,-1.885 -3.709,-2.008 v 3.893"
        style="fill:#231f20;fill-opacity:1;fill-rule:evenodd;stroke:none"
@@ -91,7 +91,7 @@
          transform="matrix(1.3333333,0,0,-1.3333333,201.23322,826.55215)" />
     </g>
     <path
-       d="m 169.101,279.134 58.68765,0.002"
+       d="m 169.101,279.134 44.27708,0.002"
        style="fill:none;stroke:#231f20;stroke-width:0.745;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:14.3;stroke-dasharray:none;stroke-opacity:1"
        id="path674"
        transform="matrix(1.3333333,0,0,-1.3333333,201.36034,826.55751)"
@@ -100,25 +100,24 @@
        d="m 212.127,281.097 3.709,-1.885 -3.709,-2.008 v 3.893"
        style="fill:#231f20;fill-opacity:1;fill-rule:evenodd;stroke:none"
        id="path676"
-       transform="matrix(1.3333333,0,0,-1.3333333,221.36034,826.55751)" />
+       transform="matrix(1.3333333,0,0,-1.3333333,201.36034,826.55751)" />
     <path
        d="m 212.127,281.097 3.709,-1.885 -3.709,-2.008 z"
        style="fill:none;stroke:#231f20;stroke-width:0.331;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:11.5;stroke-dasharray:none;stroke-opacity:1"
        id="path678"
-       transform="matrix(1.3333333,0,0,-1.3333333,221.36034,826.55751)" />
+       transform="matrix(1.3333333,0,0,-1.3333333,201.36034,826.55751)" />
     <path
        d="m 185.618,281.097 3.708,-1.885 -3.708,-2.008 v 3.893"
        style="fill:#231f20;fill-opacity:1;fill-rule:evenodd;stroke:none"
        id="path680"
-       transform="matrix(1.3333333,0,0,-1.3333333,221.36034,826.55751)" />
+       transform="matrix(1.3333333,0,0,-1.3333333,201.36034,826.55751)" />
     <path
        d="m 185.618,281.097 3.708,-1.885 -3.708,-2.008 z"
        style="fill:none;stroke:#231f20;stroke-width:0.331;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:11.5;stroke-dasharray:none;stroke-opacity:1"
        id="path682"
-       transform="matrix(1.3333333,0,0,-1.3333333,221.36034,826.55751)" />
+       transform="matrix(1.3333333,0,0,-1.3333333,201.36034,826.55751)" />
     <g
-       id="g4192"
-       transform="translate(20)">
+       id="g4192">
       <path
          d="m 189.406,272.863 h 14.152 v 14.105 h -14.152 z"
          style="fill:#ffffff;fill-opacity:1;fill-rule:nonzero;stroke:none"
@@ -357,7 +356,7 @@
        transform="translate(341.17034,413.00646)" />
     <g
        id="g3499"
-       transform="translate(12.70622)">
+       transform="translate(-7.29378)">
       <path
          style="font-variation-settings:normal;vector-effect:none;fill:none;fill-opacity:1;stroke:#231f20;stroke-width:0.993333;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:14.3;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;-inkscape-stroke:none;stop-color:#000000"
          d="M 8.5146025,41.393369 H -4.8831562"
@@ -376,7 +375,7 @@
     </g>
     <text
        xml:space="preserve"
-       transform="matrix(1.3333333,0,0,1.3333333,468.67634,437.23174)"
+       transform="matrix(1.3333333,0,0,1.3333333,448.67634,437.23174)"
        style="font-variant:normal;font-weight:normal;font-size:6px;font-family:HelveticaNeue;-inkscape-font-specification:HelveticaNeue-Roman;writing-mode:lr-tb;fill:#231f20;fill-opacity:1;fill-rule:nonzero;stroke:none"
        id="text1224-2"><tspan
          sodipodi:role="line"
@@ -387,7 +386,7 @@
    id="tspan3706">P</tspan>oisson</tspan></text>
     <text
        xml:space="preserve"
-       transform="matrix(1.3333333,0,0,1.3333333,504.88785,437.41574)"
+       transform="matrix(1.3333333,0,0,1.3333333,484.88785,437.41574)"
        style="font-variant:normal;font-weight:normal;font-size:6px;font-family:HelveticaNeue;-inkscape-font-specification:HelveticaNeue-Roman;writing-mode:lr-tb;fill:#231f20;fill-opacity:1;fill-rule:nonzero;stroke:none"
        id="text1224-1"><tspan
          sodipodi:role="line"
@@ -412,34 +411,5 @@
          id="tspan1222-3"
          x="0"
          y="0">GLM model</tspan></text>
-    <g
-       id="g4088"
-       transform="matrix(0.93528641,0,0,0.93528641,33.025647,2.3415471)">
-      <rect
-         style="font-variation-settings:normal;opacity:1;vector-effect:none;fill:#ffffff;fill-opacity:1;stroke:#231f20;stroke-width:0.481186;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:11.5;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;-inkscape-stroke:none;stop-color:#000000;stop-opacity:1"
-         id="rect3899"
-         width="19.562819"
-         height="13.520405"
-         x="124.09497"
-         y="46.650028"
-         transform="matrix(1.2978487,0,0,1.4967994,271.80637,401.83455)" />
-      <text
-         xml:space="preserve"
-         transform="matrix(1.3333333,0,0,1.3333333,436.34966,479.54853)"
-         style="font-variant:normal;font-weight:normal;font-size:6px;font-family:HelveticaNeue;-inkscape-font-specification:HelveticaNeue-Roman;writing-mode:lr-tb;fill:#231f20;fill-opacity:1;fill-rule:nonzero;stroke:none"
-         id="text1224-9-6"
-         x="7.5629992"
-         y="0"><tspan
-           sodipodi:role="line"
-           id="tspan1222-3-0"
-           x="7.5629992"
-           y="0"
-           style="font-style:italic;text-align:center;text-anchor:middle">Firing </tspan><tspan
-           sodipodi:role="line"
-           x="7.5629992"
-           y="7.5"
-           style="font-style:italic;text-align:center;text-anchor:middle"
-           id="tspan4082">rate</tspan></text>
-    </g>
   </g>
 </svg>
