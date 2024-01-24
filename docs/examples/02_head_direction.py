@@ -205,7 +205,7 @@ input_feature = np.asarray(input_feature[:-1])
 
 suptitle = "Input feature: Count History"
 neuron_id = 0
-utils.plotting.plot_features(input_feature, neuron_id, count.rate, n_shift, window_size, suptitle)
+utils.plotting.plot_features(input_feature, neuron_id, count.rate, n_shift, suptitle)
 
 # %%
 # As you can see, the time axis is backward, this happens because convolution flips the time axis.
@@ -284,9 +284,38 @@ basis = nmo.basis.RaisedCosineBasisLog(n_basis_funcs=8)
 #
 # `basis.evaluate_on_grid` is a convenience method to view all basis functions
 # across their whole domain:
-time, basis_kernels = basis.evaluate_on_grid(250)
-plt.figure()
-plt.plot(time, basis_kernels)
+time, basis_kernels = basis.evaluate_on_grid(window_size)
+time *= prediction_window
+
+# get some coefficient for approximating the noisy weights with the basis
+lsq_coef, _, _,_ = np.linalg.lstsq(basis_kernels, np.squeeze(model.coef_))
+
+fig, axs = plt.subplots(1, 4, figsize=(12, 3))
+axs[0].set_title("spike history weights")
+# flip time plot how a spike affects the future rate
+axs[0].plot(time, model.coef_.flatten())
+axs[0].set_xlabel("Time from spike (sec)")
+axs[0].set_ylabel("Weight")
+
+axs[1].set_title("Basis Kernels")
+axs[1].plot(time, basis_kernels)
+axs[1].set_xlabel("Time from spike (sec)")
+axs[1].set_ylabel("a.u.")
+
+axs[2].set_title("LS coefficients")
+for k in range(len(lsq_coef)):
+    axs[2].bar([k], [lsq_coef[k]], width=1)
+axs[2].set_xticks([0, 7])
+axs[2].set_xlabel("Basis ID")
+axs[2].set_ylabel("Coefficient")
+
+axs[3].set_title("Approx. Weights")
+axs[3].plot(time, np.squeeze(model.coef_))
+axs[3].plot(time, basis_kernels @ lsq_coef, "--k")
+axs[3].set_xlabel("Time from spike (sec)")
+axs[3].set_ylabel("Weight")
+
+plt.tight_layout()
 
 # %%
 #
@@ -312,12 +341,6 @@ plt.plot(time, basis_kernels)
 # evaluate the basis to get a (window_sizd, n_basis_funcs) matrix
 eval_basis = basis.evaluate_on_grid(window_size)[1]
 
-# plot the basis
-plt.figure()
-plt.plot(eval_basis)
-plt.xticks(np.arange(0, window_size+20, 20), np.arange(0, window_size+20, 20)*bin_size)
-plt.xlabel("Time from spike (sec)")
-plt.ylabel("Weight")
 
 # %%
 # We can "compress" input feature by multiplying the matrix with the basis.
