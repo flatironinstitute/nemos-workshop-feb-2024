@@ -149,8 +149,9 @@ def lnp_schematic(input_feature: nap.Tsd,
             axes[i, 3].set_frame_on(False)
             axes[i, 3].xaxis.set_visible(False)
             axes[i, 3].yaxis.set_visible(False)
+            ax = None
             for j in range(3):
-                ax = fig.add_subplot(gs[j, 0])
+                ax = fig.add_subplot(gs[j, 0], sharey=ax)
                 spikes = jax.random.poisson(jax.random.PRNGKey(j*i + j + i), l)
                 spike_times = np.where(spikes)
                 spike_heights = spikes[spike_times]
@@ -164,7 +165,7 @@ def lnp_schematic(input_feature: nap.Tsd,
     else:
         for i, _ in enumerate(nonlinear):
             axes[i, 3].set_visible(False)
-    suptitles = ["Input", "Linear", "Nonlinear", "Poisson samples\n(spikes)"]
+    suptitles = ["Input", "Linear", "Nonlinear", "Poisson samples\n(spike histogram)"]
     suptitles_to_add = [True, True, plot_nonlinear, plot_spikes]
     for b, ax, t in zip(suptitles_to_add, axes[0, :], suptitles):
         if b:
