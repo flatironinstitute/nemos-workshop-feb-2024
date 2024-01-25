@@ -3,8 +3,8 @@
 """# Fit injected current
 
 For our first example, we will look at a very simple dataset: patch-clamp
-recordings from a single neuron in layer 4 of rodent primary visual cortex.
-This data is from the [Allen Brain
+recordings from a single neuron in layer 4 of mouse primary visual cortex. This
+data is from the [Allen Brain
 Atlas](https://celltypes.brain-map.org/experiment/electrophysiology/478498617),
 and experimenters injected current directly into the cell, while recording the
 neuron's membrane potential and spiking behavior. The experiments varied the
@@ -649,13 +649,21 @@ model.score(predictor, count, score_type='pseudo-r2-Cohen')
 # Despite the simplicity of this dataset, there is still more that we can do
 # here. The following sections provide some possible exercises to try yourself!
 #
-# ### Other stimulation paradigms
+# ### Other stimulation protocols
 #
-# We've only fit the model to a single stimulation paradigm, but our dataset
+# We've only fit the model to a single stimulation protocol, but our dataset
 # contains many more! How does the model perform on "Ramp"? On "Noise 2"? Based
 # on the example code above, write new code that fits the model on some other
-# stimulation paradigms and evaluate its performance. Which stimulation does it
+# stimulation protocol and evaluate its performance. Which stimulation does it
 # perform best on? Which is the worst?
+#
+# ### Train and test sets
+#
+# In this example, we've used been fitting and evaluating our model on the same
+# data set. That's generally a bad idea! Try splitting the data in to train and
+# test sets, fitting the model to one portion of the data and evaluating on
+# another portion. You could split this stimulation protocol into train and
+# test sets or use different protocols to train and test on.
 #
 # ### Model extensions
 #
