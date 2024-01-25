@@ -5,6 +5,7 @@ import pandas as pd
 import pynapple as nap
 import numpy as np
 from numpy.typing import NDArray
+from matplotlib.animation import FuncAnimation
 
 
 def set_two_y_axes_zeros_equal(ax1: plt.Axes, ax2: plt.Axes):
@@ -115,7 +116,8 @@ def plot_count_history_window(
         history_window: float,
         bin_size: float,
         start: float,
-        ylim: tuple[float, float]
+        ylim: tuple[float, float],
+        plot_every: int
 ):
     """
     Plot the count history rolling window.
@@ -134,15 +136,17 @@ def plot_count_history_window(
         Start time for the first plotted window
     ylim:
         y limits for axes.
+    plot_every:
+        Plot a window series every "plot_every" bins
 
     Returns
     -------
 
     """
-    interval = nap.IntervalSet(start, start + history_window + bin_size * n_shift)
+    interval = nap.IntervalSet(start, start + history_window + bin_size * n_shift * plot_every)
     fig, axs = plt.subplots(n_shift, 1, figsize=(8, 8))
-    for shift_bin in range(n_shift):
-        ax = axs[shift_bin]
+    for shift_bin in range(0, n_shift*plot_every, plot_every):
+        ax = axs[shift_bin // plot_every]
 
         shift_sec = shift_bin * bin_size
         # select the first bin after one sec
@@ -279,7 +283,7 @@ def plot_weighted_sum_basis(time, weights, basis_kernels, basis_coeff):
     axs[2].set_xlabel("Time from spike (sec)")
     axs[2].set_ylabel("Weight")
 
-    axs[3].set_title("Approx. Weights")
+    axs[3].set_title("Spike History Effect")
     axs[3].plot(time, np.squeeze(weights), alpha=0.3)
     axs[3].plot(time, basis_kernels @ basis_coeff, "--k")
     axs[3].set_xlabel("Time from spike (sec)")
@@ -287,3 +291,53 @@ def plot_weighted_sum_basis(time, weights, basis_kernels, basis_coeff):
 
     plt.tight_layout()
     return fig
+
+
+class PlotSlidingWindow():
+    def __init__(
+            self,
+            counts: nap.Tsd,
+            n_shift: int,
+            history_window: float,
+            bin_size: float,
+            start: float,
+            ylim: tuple[float, float],
+            plot_every: int,
+            figsize=tuple[float,float],
+            interval: int = 10
+    ):
+        self.counts = counts
+        self.n_shift = n_shift
+        self.history_window = history_window
+        self.plot_every = plot_every
+        self.bin_size = bin_size
+        self.start = start
+        self.ylim = ylim
+        self.fig, self.ax, self.rect_pred, self.rect_hist = self.set_up(figsize)
+        self.interval = interval
+
+    def set_up(self, figsize):
+        fig, ax = plt.subplots(1, 1, figsize=figsize)
+        rect_hist = plt.Rectangle((self.start, 0),  self.history_window, self.ylim[1] - self.ylim[0],
+                                       alpha=0.3,
+                                       color="orange")
+        rect_pred = plt.Rectangle((self.start + self.history_window, 0), self.bin_size, self.ylim[1] - self.ylim[0],
+                                       alpha=0.3,
+                                       color="tomato")
+        plot_ep = nap.IntervalSet(self.start, self.start + self.history_window + self.n_shift*self.bin_size*self.plot_every)
+        ax.step(self.counts.restrict(plot_ep).t, self.counts.restrict(plot_ep).d, where="post")
+        ax.add_patch(rect_pred)
+        ax.add_patch(rect_hist)
+        ax.set_xlim(*plot_ep.values)
+        return fig, ax, rect_pred, rect_hist
+
+    def update_fig(self, frame):
+        if frame == self.n_shift - 1:
+            self.rect_hist.set_x(self.start)
+            self.rect_pred.set_x(self.start + self.history_window)
+        else:
+            self.rect_pred.set_x(self.rect_pred.get_x() + self.bin_size*self.plot_every)
+            self.rect_hist.set_x(self.rect_hist.get_x() + self.bin_size*self.plot_every)
+
+    def run(self):
+        return FuncAnimation(self.fig, self.update_fig, range(0, self.n_shift), interval=self.interval, repeat=True)
