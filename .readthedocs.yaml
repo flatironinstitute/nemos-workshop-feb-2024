@@ -14,7 +14,7 @@ build:
     pre_build:
       # reduce interval tqdm updates, so rendered output less messy, see
       # https://github.com/tqdm/tqdm/pull/1491
-      export TQDM_MININTERVAL=5
+      - export TQDM_MININTERVAL=5
 
 mkdocs:
   configuration: mkdocs.yml
