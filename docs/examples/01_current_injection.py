@@ -219,11 +219,12 @@ ax.set_xlabel("Time (s)")
 # some time to examine our data and think about what features are interesting
 # and worth capturing. As we discussed in [tutorial 0](../00_conceptual_intro),
 # the GLM is a model of the neuronal firing rate. However, in our experiments,
-# we do not observe the firing rate, only the spikes! Even worse, the spikes
-# are the output of a stochastic process, so running the exact same experiment
-# multiple times will lead to slightly different spike times. This means that
-# no model can perfectly predict spike times. So how do we tell if our model is
-# doing a good job?
+# we do not observe the firing rate, only the spikes! Moreover, neural
+# responses are typically noisy&mdash;even in this highly controlled experiment
+# where the same current was injected over multiple trials, the spike times
+# were slightly different from trial-to-trial. No model can perfectly predict
+# spike times on an individual trial, so how do we tell if our model is doing a
+# good job?
 #
 # Our objective function is the log-likelihood of the observed spikes given the
 # predicted firing rate. That is, we're trying to find the firing rate, as a
@@ -231,15 +232,12 @@ ax.set_xlabel("Time (s)")
 # makes sense: the firing rate should be high where there are many spikes, and
 # vice versa. However, it can be difficult to figure out if your model is doing
 # a good job by squinting at the observed spikes and the predicted firing rates
-# plotted together. We'd like to compare the predicted firing rates against the
-# observed ones, so we'll have to approximate the firing rate from the data in
-# a model-free way.
+# plotted together. 
 #
-# One common way of doing this is to smooth the spikes, convolving them with a
-# Gaussian filter. This is equivalent to taking the local average of the number
-# of spikes, with the size of the Gaussian determining the size of the
-# averaging window. This approximate firing rate can then be compared to our
-# model's predictions, in order to visualize its performance.
+# One common way to visualize a rough estimate of firing rate is to smooth
+# the spikes by convolving them with a Gaussian filter. See section 1.2 of [*Theoretical
+#  Neuroscience*](https://boulderschool.yale.edu/sites/default/files/files/DayanAbbott.pdf)
+#  by Dayan and Abbott for a more thorough description.
 #
 # !!! info
 #
