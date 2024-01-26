@@ -270,7 +270,7 @@ count
 # with a gaussian kernel. Pynapple again provides a convenience function for
 # this:
 
-# the argument to this method are the standard deviation of the gaussian and
+# the inputs to this function are the standard deviation of the gaussian and
 # the full width of the window, given in bins. So std=50 corresponds to a
 # standard deviation of 50*.001=.05 seconds
 firing_rate = count.smooth(std=50, size=1000)
@@ -439,12 +439,14 @@ count = jax.numpy.asarray(count.values)
 #
 # Now we're ready to fit our model!
 #
-# First, we need to define our GLM model object. We intend for our models to be
-# similar to
-# [scikit-learn's](https://scikit-learn.org/stable/getting_started.html)
-# estimators: they are initialized with hyperparameters that specify
-# optimization and model details, and then the user calls `.fit` with the
-# model matrix and data.
+# First, we need to define our GLM model object. We intend for users
+# to interact with our models like
+# [scikit-learn](https://scikit-learn.org/stable/getting_started.html)
+# estimators. In a nutshell, a model instance is initialized with
+# hyperparameters that specify optimization and model details,
+# and then the user calls the `.fit()` function to fit the model to data.
+# We will walk you through the process below by example, but if you
+# are interested in reading more details see the [Getting Started with scikit-learn](https://scikit-learn.org/stable/getting_started.html) webpage.
 #
 # To initialize our model, we need to specify the regularizer and observation
 # model objects, both of which should be one of our custom objects:
@@ -520,10 +522,9 @@ print(f"intercept_ shape: {model.intercept_.shape}")
 # is doing by looking at them. So how should we evaluate our model?
 #
 # First, we can use the model to predict the firing rates and compare that to
-# our smoothed spike train, to see which of the phenomena we described in our
-# pynapple analysis our model is able to capture. By calling `predict()` we can
-# get the model's predicted firing rate for this data. Note that this is just
-# the output of the model's linear-nonlinear step, as described earlier!
+# the smoothed spike train. By calling `predict()` we can get the model's
+# predicted firing rate for this data. Note that this is just the output of the
+# model's linear-nonlinear step, as described earlier!
 
 predicted_fr = model.predict(predictor)
 # convert units from spikes/bin to spikes/sec
