@@ -698,3 +698,30 @@ model.score(predictor, count, score_type='pseudo-r2-Cohen')
 # current history inputs without them (though the model won't do as well), or
 # return to this example after you've learned about `Basis` objects and how to
 # use them.
+#
+# ## Citation
+#
+# The data used in this tutorial is from the Allen Brain Map, with the
+# [following
+# citation](https://knowledge.brain-map.org/data/1HEYEW7GMUKWIQW37BO/summary):
+#
+# Contributors: Agata Budzillo, Bosiljka Tasic, Brian R. Lee, Fahimeh
+# Baftizadeh, Gabe Murphy, Hongkui Zeng, Jim Berg, Nathan Gouwens, Rachel
+# Dalley, Staci A. Sorensen, Tim Jarsky, Uygar Sümbül Zizhen Yao
+#
+# Dataset: Allen Institute for Brain Science (2020). Allen Cell Types Database
+# -- Mouse Patch-seq [dataset]. Available from
+# brain-map.org/explore/classes/multimodal-characterization.
+#
+# Primary publication: Gouwens, N.W., Sorensen, S.A., et al. (2020). Integrated
+# morphoelectric and transcriptomic classification of cortical GABAergic cells.
+# Cell, 183(4), 935-953.E19. https://doi.org/10.1016/j.cell.2020.09.057
+#
+# Patch-seq protocol: Lee, B. R., Budzillo, A., et al. (2021). Scaled, high
+# fidelity electrophysiological, morphological, and transcriptomic cell
+# characterization. eLife, 2021;10:e65482. https://doi.org/10.7554/eLife.65482
+#
+# Mouse VISp L2/3 glutamatergic neurons: Berg, J., Sorensen, S. A., Miller, J.,
+# Ting, J., et al. (2021) Human neocortical expansion involves glutamatergic
+# neuron diversification. Nature, 598(7879):151-158. doi:
+# 10.1038/s41586-021-03813-8
