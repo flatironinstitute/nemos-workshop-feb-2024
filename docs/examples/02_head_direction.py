@@ -178,7 +178,12 @@ utils.plotting.plot_count_history_window(
     ylim,
     plot_every
 )
-#
+obj = utils.plotting.PlotSlidingWindow(
+    neuron_count,20,history_window,bin_size,
+    float(interval.start), (0,3),1,(8, 8),200,
+    add_before=0, add_after=0.8)
+anim = obj.run()
+plt.show()
 # # %%
 # # We can construct a predictor feature matrix by vertically stacking the "orange" chunks of spike history.
 # # A fast way to do so is by convolving the counts with an identity matrix.

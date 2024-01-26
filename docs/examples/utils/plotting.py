@@ -304,7 +304,9 @@ class PlotSlidingWindow():
             ylim: tuple[float, float],
             plot_every: int,
             figsize=tuple[float,float],
-            interval: int = 10
+            interval: int = 10,
+            add_before: float = 0.2,
+            add_after: float = 0.2
     ):
         self.counts = counts
         self.n_shift = n_shift
@@ -313,31 +315,52 @@ class PlotSlidingWindow():
         self.bin_size = bin_size
         self.start = start
         self.ylim = ylim
-        self.fig, self.ax, self.rect_pred, self.rect_hist = self.set_up(figsize)
+        self.add_before = add_before
+        self.add_after = add_after
+        self.fig, self.rect_obs, self.rect_hist = self.set_up(figsize)
         self.interval = interval
 
     def set_up(self, figsize):
-        fig, ax = plt.subplots(1, 1, figsize=figsize)
+        fig = plt.figure(figsize=figsize)
+
+        # set up the plot for the sliding history window
+        ax = plt.subplot2grid((5, 1), (0, 0), rowspan=1, colspan=1, fig=fig)
+        # create the two rectangles, prediction and current observation
         rect_hist = plt.Rectangle((self.start, 0),  self.history_window, self.ylim[1] - self.ylim[0],
                                        alpha=0.3,
                                        color="orange")
-        rect_pred = plt.Rectangle((self.start + self.history_window, 0), self.bin_size, self.ylim[1] - self.ylim[0],
+        rect_obs = plt.Rectangle((self.start + self.history_window, 0), self.bin_size, self.ylim[1] - self.ylim[0],
                                        alpha=0.3,
                                        color="tomato")
-        plot_ep = nap.IntervalSet(self.start, self.start + self.history_window + self.n_shift*self.bin_size*self.plot_every)
+        plot_ep = nap.IntervalSet(- self.add_before + self.start,
+                                  self.start + self.history_window + self.n_shift*self.bin_size*self.plot_every +
+                                  self.add_after)
         ax.step(self.counts.restrict(plot_ep).t, self.counts.restrict(plot_ep).d, where="post")
-        ax.add_patch(rect_pred)
+        ax.add_patch(rect_obs)
         ax.add_patch(rect_hist)
         ax.set_xlim(*plot_ep.values)
-        return fig, ax, rect_pred, rect_hist
+
+        # set up the feature matrix plot
+        ax = plt.subplot2grid((5, 1), (1, 0), rowspan=4, colspan=1, fig=fig)
+        # iset = nap.IntervalSet(start=rect_hist.get_x(), end=rect_hist.get_x() + rect_hist.get_width())
+        # cnt = self.counts.restrict(iset).d
+        # ax.step(np.arange(cnt.shape[0]), self.n_shift * np.diff(self.ylim) + cnt, where="post")
+        ax.set_ylim(0, self.n_shift * np.diff(self.ylim))
+        plt.tight_layout()
+        return fig, rect_obs, rect_hist
 
     def update_fig(self, frame):
+        print(frame)
         if frame == self.n_shift - 1:
             self.rect_hist.set_x(self.start)
-            self.rect_pred.set_x(self.start + self.history_window)
+            self.rect_obs.set_x(self.start + self.history_window)
         else:
-            self.rect_pred.set_x(self.rect_pred.get_x() + self.bin_size*self.plot_every)
+            self.rect_obs.set_x(self.rect_obs.get_x() + self.bin_size*self.plot_every)
             self.rect_hist.set_x(self.rect_hist.get_x() + self.bin_size*self.plot_every)
 
+            iset = nap.IntervalSet(start=self.rect_hist.get_x(), end=self.rect_hist.get_x() + self.rect_hist.get_width())
+            cnt = self.counts.restrict(iset).d
+            self.fig.axes[1].step(np.arange(cnt.shape[0]), np.diff(self.ylim) * (self.n_shift - frame - 1) + cnt, where="post")
+
     def run(self):
-        return FuncAnimation(self.fig, self.update_fig, range(0, self.n_shift), interval=self.interval, repeat=True)
+        return FuncAnimation(self.fig, self.update_fig, self.n_shift, interval=self.interval, repeat=True)
