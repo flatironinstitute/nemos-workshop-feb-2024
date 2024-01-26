@@ -231,15 +231,12 @@ ax.set_xlabel("Time (s)")
 # makes sense: the firing rate should be high where there are many spikes, and
 # vice versa. However, it can be difficult to figure out if your model is doing
 # a good job by squinting at the observed spikes and the predicted firing rates
-# plotted together. We'd like to compare the predicted firing rates against the
-# observed ones, so we'll have to approximate the firing rate from the data in
-# a model-free way.
+# plotted together. 
 #
-# One common way of doing this is to smooth the spikes, convolving them with a
-# Gaussian filter. This is equivalent to taking the local average of the number
-# of spikes, with the size of the Gaussian determining the size of the
-# averaging window. This approximate firing rate can then be compared to our
-# model's predictions, in order to visualize its performance.
+# One common way to visualize a rough estimate of firing rate is to smooth
+# the spikes by convolving them with a Gaussian filter. See section 1.2 of [*Theoretical
+#  Neuroscience*](https://boulderschool.yale.edu/sites/default/files/files/DayanAbbott.pdf)
+#  by Dayan and Abbott for a more thorough description.
 #
 # !!! info
 #
