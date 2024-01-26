@@ -486,17 +486,22 @@ class PlotSlidingWindow():
 
         # set up the feature matrix plot
         ax = plt.subplot2grid((5, 1), (1, 0), rowspan=4, colspan=1, fig=fig)
-        # iset = nap.IntervalSet(start=rect_hist.get_x(), end=rect_hist.get_x() + rect_hist.get_width())
-        # cnt = self.counts.restrict(iset).d
-        # ax.step(np.arange(cnt.shape[0]), self.n_shift * np.diff(self.ylim) + cnt, where="post")
         ax.set_ylim(0, self.n_shift * np.diff(self.ylim))
         plt.tight_layout()
         return fig, rect_obs, rect_hist
 
     def update_fig(self, frame):
         print(frame)
+
         if frame == 0:
             self.count_frame_0 += 1
+
+        if frame == self.n_shift - 1:
+            self.count_frame_0 = 0
+
+        if self.count_frame_0 == 0 and frame == 0:
+            self.clear_axes()
+
         if frame == self.n_shift - 1:
             self.rect_hist.set_x(self.start)
             self.rect_obs.set_x(self.start + self.history_window)
@@ -507,6 +512,10 @@ class PlotSlidingWindow():
             iset = nap.IntervalSet(start=self.rect_hist.get_x(), end=self.rect_hist.get_x() + self.rect_hist.get_width())
             cnt = self.counts.restrict(iset).d
             self.fig.axes[1].step(np.arange(cnt.shape[0]), np.diff(self.ylim) * (self.n_shift - frame - 1 - self.count_frame_0) + cnt, where="post")
+
+    def clear_axes(self):
+        self.fig.axes[1].cla()
+        self.fig.axes[1].set_ylim(-1, self.n_shift * np.diff(self.ylim) + 1)
 
     def run(self):
         return FuncAnimation(self.fig, self.update_fig, self.n_shift, interval=self.interval, repeat=True)
