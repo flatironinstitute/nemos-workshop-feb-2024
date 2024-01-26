@@ -78,7 +78,7 @@ jax.config.update("jax_enable_x64", True)
 # data.
 
 path = os.path.join(os.getcwd(), "allen_478498617.nwb")
-utils.data.download_data(path, "https://osf.io/um3bj/download")
+utils.data.download_data(path, "https://osf.io/vf2nj/download")
 
 # %%
 # ## Pynapple
