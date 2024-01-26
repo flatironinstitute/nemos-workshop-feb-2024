@@ -54,11 +54,6 @@ place. We can always build in more complications later.
 As described in tutorial 0, the Generalized Linear Model in neuroscience can
 also be thought of as a LNP model: a linear-nonlinear-Poisson model.
 
-!!! note
-
-    If you're comfortable with GLMs, you can skip ahead to the [Preparing
-    data](#preparing-data) section to see how to work with them in nemos.
-
 <figure markdown>
 <!-- note that the src here has an extra ../ compared to other images, necessary when specifying path directly in html -->
 <img src="../../../assets/lnp_model.svg" style="width: 100%"/>
