@@ -87,6 +87,11 @@ utils.data.download_data(path, "https://osf.io/um3bj/download")
 #
 # Now that we've downloaded the data, let's open it with pynapple and examine
 # its contents.
+#
+# <div class="notes">
+# - load in data
+# </div>
+
 
 data = nap.load_file(path)
 print(data)
