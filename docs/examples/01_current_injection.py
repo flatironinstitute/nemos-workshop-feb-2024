@@ -217,13 +217,13 @@ ax.set_xlabel("Time (s)")
 #
 # Before using the Generalized Linear Model, or any model, it's worth taking
 # some time to examine our data and think about what features are interesting
-# and worth capturing. As we discussed in tutorial 0, the GLM is a model of the
-# neuronal firing rate. However, in our experiments, we do not observe the
-# firing rate, only the spikes! Even worse, the spikes are the output of a
-# stochastic process, so running the exact same experiment multiple times will
-# lead to slightly different spike times. This means that no model can
-# perfectly predict spike times. So how do we tell if our model is doing a good
-# job?
+# and worth capturing. As we discussed in [tutorial 0](../00_conceptual_intro),
+# the GLM is a model of the neuronal firing rate. However, in our experiments,
+# we do not observe the firing rate, only the spikes! Even worse, the spikes
+# are the output of a stochastic process, so running the exact same experiment
+# multiple times will lead to slightly different spike times. This means that
+# no model can perfectly predict spike times. So how do we tell if our model is
+# doing a good job?
 #
 # Our objective function is the log-likelihood of the observed spikes given the
 # predicted firing rate. That is, we're trying to find the firing rate, as a

@@ -51,8 +51,8 @@ place. We can always build in more complications later.
 
 ### GLM components
 
-As described in tutorial 0, the Generalized Linear Model in neuroscience can
-also be thought of as a LNP model: a linear-nonlinear-Poisson model.
+The Generalized Linear Model in neuroscience can also be thought of as a LNP
+model: a linear-nonlinear-Poisson model.
 
 <figure markdown>
 <!-- note that the src here has an extra ../ compared to other images, necessary when specifying path directly in html -->
