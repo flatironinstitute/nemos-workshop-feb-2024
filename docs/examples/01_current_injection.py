@@ -187,7 +187,7 @@ spikes
 #
 # We can index into the `TsGroup` to see the timestamps for this neuron's
 # spikes:
-spikes[1]
+spikes[0]
 
 # %%
 #
@@ -197,7 +197,7 @@ spikes[1]
 
 spikes = spikes.restrict(noise_interval)
 print(spikes)
-spikes[1]
+spikes[0]
 
 
 # %%
