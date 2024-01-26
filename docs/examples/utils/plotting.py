@@ -460,7 +460,7 @@ class PlotSlidingWindow():
         self.ylim = ylim
         self.add_before = add_before
         self.add_after = add_after
-        self.fig, self.rect_obs, self.rect_hist = self.set_up(figsize)
+        self.fig, self.rect_obs, self.rect_hist, self.line_tree, self.rect_hist_ax2 = self.set_up(figsize)
         self.interval = interval
         self.count_frame_0 = -1
 
@@ -471,51 +471,73 @@ class PlotSlidingWindow():
         ax = plt.subplot2grid((5, 1), (0, 0), rowspan=1, colspan=1, fig=fig)
         # create the two rectangles, prediction and current observation
         rect_hist = plt.Rectangle((self.start, 0),  self.history_window, self.ylim[1] - self.ylim[0],
-                                       alpha=0.3,
-                                       color="orange")
+                                       alpha=0.3, color="orange")
         rect_obs = plt.Rectangle((self.start + self.history_window, 0), self.bin_size, self.ylim[1] - self.ylim[0],
                                        alpha=0.3,
                                        color="tomato")
         plot_ep = nap.IntervalSet(- self.add_before + self.start,
                                   self.start + self.history_window + self.n_shift*self.bin_size*self.plot_every +
                                   self.add_after)
-        ax.step(self.counts.restrict(plot_ep).t, self.counts.restrict(plot_ep).d, where="post")
+        color = ax.step(self.counts.restrict(plot_ep).t, self.counts.restrict(plot_ep).d, where="post")[0].get_color()
+
         ax.add_patch(rect_obs)
         ax.add_patch(rect_hist)
         ax.set_xlim(*plot_ep.values)
 
         # set up the feature matrix plot
         ax = plt.subplot2grid((5, 1), (1, 0), rowspan=4, colspan=1, fig=fig)
-        ax.set_ylim(0, self.n_shift * np.diff(self.ylim))
+
+        line_tree = []
+        for frame in range(self.n_shift):
+            iset = nap.IntervalSet(start=rect_hist.get_x() + self.bin_size*self.plot_every*frame,
+                                   end=rect_hist.get_x() + rect_hist.get_width() + self.bin_size*self.plot_every*frame)
+            cnt = self.counts.restrict(iset).d
+            line_tree.append(fig.axes[1].step(np.arange(cnt.shape[0])*self.bin_size,
+                                  np.diff(self.ylim) * (self.n_shift - frame - 1) + cnt,
+                                  where="post", color=color))
+            if frame == 0:
+                rect_hist_ax2 = plt.Rectangle(
+                    (0, (self.ylim[1] - self.ylim[0]) * (self.n_shift - 1)),
+                    (cnt.shape[0] - 1)*self.bin_size,
+                    self.ylim[1] - self.ylim[0],
+                    alpha=0.3,
+                    color="orange"
+                )
+                ax.add_patch(rect_hist_ax2)
+
+        # revert tick labels
+        yticks = ax.get_yticks()
+        original_ytick_labels = ax.get_yticklabels()
+        ax.set_yticks(yticks + self.ylim[1] - self.ylim[0])
+        reverse_ytick_labels = [label._text for label in reversed(original_ytick_labels)]
+        ax.set_yticklabels(reverse_ytick_labels)
+
+        ax.set_ylabel("Sample Index")
+        ax.set_xlabel("Time From Spike (sec)")
+        ax.set_ylim(-1, self.n_shift * np.diff(self.ylim) + 1)
+        self.set_lines_visible(line_tree[1:], False)
+
         plt.tight_layout()
-        return fig, rect_obs, rect_hist
+        return fig, rect_obs, rect_hist, line_tree, rect_hist_ax2
 
     def update_fig(self, frame):
-        print(frame)
 
         if frame == 0:
-            self.count_frame_0 += 1
-
-        if frame == self.n_shift - 1:
-            self.count_frame_0 = 0
-
-        if self.count_frame_0 == 0 and frame == 0:
-            self.clear_axes()
-
-        if frame == self.n_shift - 1:
             self.rect_hist.set_x(self.start)
-            self.rect_obs.set_x(self.start + self.history_window)
+            self.rect_obs.set_x(self.start + self.rect_hist.get_width())
+            self.set_lines_visible(self.line_tree, False)
+            self.rect_hist_ax2.set_y((self.ylim[1] - self.ylim[0]) * (self.n_shift - 1))
         else:
             self.rect_obs.set_x(self.rect_obs.get_x() + self.bin_size*self.plot_every)
             self.rect_hist.set_x(self.rect_hist.get_x() + self.bin_size*self.plot_every)
+            self.rect_hist_ax2.set_y(self.rect_hist_ax2.get_y() - (self.ylim[1] - self.ylim[0]))
+            self.rect_hist_ax2.set_height(self.ylim[1] - self.ylim[0])
 
-            iset = nap.IntervalSet(start=self.rect_hist.get_x(), end=self.rect_hist.get_x() + self.rect_hist.get_width())
-            cnt = self.counts.restrict(iset).d
-            self.fig.axes[1].step(np.arange(cnt.shape[0]), np.diff(self.ylim) * (self.n_shift - frame - 1 - self.count_frame_0) + cnt, where="post")
+        self.set_lines_visible(self.line_tree[frame], True)
 
-    def clear_axes(self):
-        self.fig.axes[1].cla()
-        self.fig.axes[1].set_ylim(-1, self.n_shift * np.diff(self.ylim) + 1)
+    @staticmethod
+    def set_lines_visible(line_tree, visible: bool):
+        jax.tree_map(lambda line: line.set_visible(visible), line_tree)
 
     def run(self):
         return FuncAnimation(self.fig, self.update_fig, self.n_shift, interval=self.interval, repeat=True)

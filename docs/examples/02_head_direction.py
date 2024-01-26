@@ -169,6 +169,7 @@ plt.tight_layout()
 # For each time point we shift our window one bin at the time.
 n_shift = 16
 plot_every = 2
+plt.close("all")
 utils.plotting.plot_count_history_window(
     neuron_count,
     n_shift,
@@ -179,7 +180,7 @@ utils.plotting.plot_count_history_window(
     plot_every
 )
 obj = utils.plotting.PlotSlidingWindow(
-    neuron_count,20,history_window,bin_size,
+    neuron_count,25,history_window,bin_size,
     float(interval.start), (0,3),1,(8, 8),200,
     add_before=0, add_after=0.8)
 anim = obj.run()
