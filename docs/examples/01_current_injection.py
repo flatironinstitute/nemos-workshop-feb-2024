@@ -477,10 +477,11 @@ count = jax.numpy.asarray(count.values)
 #
 # !!! info "Why LBFGS?"
 #
-#     LBFGS is a second-order optimizer, that is, it uses both the first
-#     derivative (the gradient) and the second derivative in order to solve the
-#     problem. This leads to a faster solution. Try other solvers to see how
-#     they behave!
+#     LBFGS is a second-order optimizer, that is, it uses the first derivative
+#     (the gradient) and approximates the second derivative in order to solve
+#     the problem. This means that LBFGS tends to find a solution faster and is
+#     often less sensitive to step-size. Try other solvers to see how they
+#     behave!
 
 model = nmo.glm.GLM(regularizer=nmo.regularizer.UnRegularized(solver_name="LBFGS"))
 
