@@ -319,6 +319,7 @@ class PlotSlidingWindow():
         self.add_after = add_after
         self.fig, self.rect_obs, self.rect_hist = self.set_up(figsize)
         self.interval = interval
+        self.count_frame_0 = -1
 
     def set_up(self, figsize):
         fig = plt.figure(figsize=figsize)
@@ -351,6 +352,8 @@ class PlotSlidingWindow():
 
     def update_fig(self, frame):
         print(frame)
+        if frame == 0:
+            self.count_frame_0 += 1
         if frame == self.n_shift - 1:
             self.rect_hist.set_x(self.start)
             self.rect_obs.set_x(self.start + self.history_window)
@@ -360,7 +363,7 @@ class PlotSlidingWindow():
 
             iset = nap.IntervalSet(start=self.rect_hist.get_x(), end=self.rect_hist.get_x() + self.rect_hist.get_width())
             cnt = self.counts.restrict(iset).d
-            self.fig.axes[1].step(np.arange(cnt.shape[0]), np.diff(self.ylim) * (self.n_shift - frame - 1) + cnt, where="post")
+            self.fig.axes[1].step(np.arange(cnt.shape[0]), np.diff(self.ylim) * (self.n_shift - frame - 1 - self.count_frame_0) + cnt, where="post")
 
     def run(self):
         return FuncAnimation(self.fig, self.update_fig, self.n_shift, interval=self.interval, repeat=True)
