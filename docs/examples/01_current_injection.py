@@ -382,8 +382,9 @@ utils.plotting.tuning_curve_plot(tuning_curve)
 #
 # First, we require that our predictors and our spike counts have the same
 # number of time bins. We can achieve this by down-sampling our current to the
-# spike counts to the proper resolution using the `bin_average` method from
-# pynapple:
+# spike counts to the proper resolution using the
+# [`bin_average`](https://pynapple-org.github.io/pynapple/reference/core/time_series/#pynapple.core.time_series.TsdTensor.bin_average)
+# method from pynapple:
 
 binned_current = current.bin_average(bin_size)
 
@@ -403,7 +404,9 @@ print(f"count sampling rate: {count.rate/1000:.02f} KHz")
 # - `count`: `(n_time_bins, n_neurons)`
 #
 # Because we only have a single neuron and a single predictor feature, we'll
-# use `np.expand_dims` to handle this.
+# use
+# [`np.expand_dims`](https://numpy.org/doc/stable/reference/generated/numpy.expand_dims.html)
+# to handle this.
 
 # add singleton dimensions for axis 1 and 2.
 predictor = np.expand_dims(binned_current, (1, 2))
@@ -457,9 +460,10 @@ count = jax.numpy.asarray(count.values)
 # !!! warning
 #
 #     With a convex problem like the GLM, in theory it does not matter which
-#     solver algorithm you use. In practice, due to numerical issues, it might.
-#     Thus, it's worth trying a couple to see how their solutions compare.
-#     (Different regularization schemes will always give different results.)
+#     solver algorithm you use. In practice, due to numerical issues, it
+#     generally does. Thus, it's worth trying a couple to see how their
+#     solutions compare. (Different regularization schemes will always give
+#     different results.)
 #
 # - Observation model: this object links the firing rate and the observed
 #   spikes, describing the distribution of neural activity (and thus changing
@@ -467,16 +471,14 @@ count = jax.numpy.asarray(count.values)
 #   Poisson, though this may change in future releases. They can be found
 #   within `nemos.observation_models`.
 #
-# !!! warning
-#     how's this description?
-#
 # For this example, we'll use an un-regularized LBFGS solver. We'll discuss
 # regularization in a later tutorial.
 #
 # !!! info "Why LBFGS?"
 #
-#     LBFGS is a second-order optimizer, that is, it uses the first derivative
-#     (the gradient) and approximates the second derivative in order to solve
+#     [LBFGS](https://en.wikipedia.org/wiki/Limited-memory_BFGS) is a
+#     quasi-Netwon method, that is, it uses the first derivative (the gradient)
+#     and approximates the second derivative (the Hessian) in order to solve
 #     the problem. This means that LBFGS tends to find a solution faster and is
 #     often less sensitive to step-size. Try other solvers to see how they
 #     behave!
@@ -494,10 +496,9 @@ model.fit(predictor, count)
 
 # %%
 #
-# Now that we've fit our data, we can retrieve the resulting parameters, the
-# analogues of the `weights` and `intercepts` variables used earlier in this
-# notebook. Similar to scikit-learn, these are stored as the `coef_` and
-# `intercept_` attributes:
+# Now that we've fit our data, we can retrieve the resulting parameters.
+# Similar to scikit-learn, these are stored as the `coef_` and `intercept_`
+# attributes:
 
 print(f"firing_rate(t) = exp({model.coef_} * current(t) + {model.intercept_})")
 
@@ -519,7 +520,7 @@ print(f"intercept_ shape: {model.intercept_.shape}")
 # is doing by looking at them. So how should we evaluate our model?
 #
 # First, we can use the model to predict the firing rates and compare that to
-# our observed firing rate, to see which of the phenomena we described in our
+# our smoothed spike train, to see which of the phenomena we described in our
 # pynapple analysis our model is able to capture. By calling `predict()` we can
 # get the model's predicted firing rate for this data. Note that this is just
 # the output of the model's linear-nonlinear step, as described earlier!
@@ -533,15 +534,15 @@ predicted_fr = predicted_fr / bin_size
 # we must convert the firing rate to a numpy array (from jax.numpy) to make it
 # pynapple compatible
 predicted_fr = nap.TsdFrame(t=binned_current.t, d=np.asarray(predicted_fr))
-# and let's smooth the firing rate the same way that we smoothed the observed
-# firing rate
+# and let's smooth the firing rate the same way that we smoothed the smoothed
+# spike train
 smooth_predicted_fr = predicted_fr.smooth(50, 1000)
 
 # and plot!
 utils.plotting.current_injection_plot(current, spikes, firing_rate,
                                       # plot the predicted firing rate that has
-                                      # been smoothed the same way as the observed
-                                      # one
+                                      # been smoothed the same way as the
+                                      # smoothed spike train
                                       predicted_firing_rate=smooth_predicted_fr)
 
 # %%
@@ -555,8 +556,8 @@ utils.plotting.current_injection_plot(current, spikes, firing_rate,
 #   amplitude in the third interval: it's too high in the first and too low in
 #   the second -- Failure!
 #
-# - Our predicted firing rate has the periodicity we see in the observed firing
-#   rate -- Success!
+# - Our predicted firing rate has the periodicity we see in the smoothed spike
+# - train -- Success!
 #
 # - The predicted firing rate does not decay as the input remains on: the
 #   amplitudes are identical for each of the bumps within a given interval --
@@ -580,7 +581,7 @@ print(f"Predicted mean firing rate: {np.mean(predicted_fr)} Hz")
 # inputs and undershot in the middle.
 #
 # We can see this more directly by computing the tuning curve for our predicted
-# firing rate and comparing that against our observed firing rate from the
+# firing rate and comparing that against our smoothed spike train from the
 # beginning of this notebook. Pynapple can help us again with this:
 
 tuning_curve_model = nap.compute_1d_tuning_curves_continuous(predicted_fr, current, 15)
@@ -595,9 +596,9 @@ fig.axes[0].legend()
 # firing rate will continue to grow as the injected current increases, which is
 # not reflected in the data.
 #
-# Viewing this plot also makes it clear that the model's tuning curve is an
-# exponential. We already knew that! That's what it means to be a LNP model of
-# a single input. But it's nice to see it made explicit.
+# Viewing this plot also makes it clear that the model's tuning curve is
+# approximately exponential. We already knew that! That's what it means to be a
+# LNP model of a single input. But it's nice to see it made explicit.
 #
 # ### Finishing up
 #
@@ -673,7 +674,7 @@ model.score(predictor, count, score_type='pseudo-r2-Cohen')
 #
 # Our model did not do a good job capturing the onset transience seen in the
 # data, and we could probably improve the match between the amplitudes of the
-# predicted and observed firing rates. How would we do that?
+# predicted firing rate and smoothed spike train. How would we do that?
 #
 # We could try adding the following inputs to the model, alone or together:
 #
