@@ -33,3 +33,21 @@ Again, thank you all for participating.
 
 The CNS Data Scientists
 
+## Schedule
+
+| Topic                                     | Time           | Instructor Name    |
+|-------------------------------------------|----------------|--------------------|
+| BREAKFAST                                 | 8 - 9 AM       | FoodTrends Drop Off|
+| Welcome                                   | 9 - 9:10 AM    | Edoardo Balzani    |
+| The Math (Convolution/Evaluation, Log-likelihood) | 9:10 - 10 AM | Edoardo Balzani    |
+| BREAK                                     | 10 - 10:30 AM  |                    |
+| Crash course on Pynapple and NWB          | 10:30 - 11 AM  | Guillaume Viejo    |
+| Exercise 1 : Current Injection            | 11 AM - 12 PM  | Billy Broderick                |
+| LUNCH                                     | 12 - 1 PM      | Pippali Drop Off   |
+| Exercise 2 : Head-direction cells         | 1 - 2 PM       | Edoardo Balzani                |
+| Exercise 3 : Grid cells          | 2 - 3 PM       | TAs                 |
+| BREAK                                     | 3 - 3:30 PM    |                    |
+| Exercise 4 :                              | 3:30 - 4:30 PM | TAs                |
+| Conclusion/Feedback                       | 4:30 - 5 PM    | TAs                |
+| DINNER                                    | 6 PM           |                    |
+
