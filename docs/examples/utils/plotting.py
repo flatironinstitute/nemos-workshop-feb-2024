@@ -40,9 +40,9 @@ def current_injection_plot(current: nap.Tsd, spikes: nap.TsGroup,
     ax.set_ylabel("Current (pA)")
     ax.set_title("Injected Current")
     ax.set_xticklabels([])
-    ax.axvspan(ex_intervals.loc[1,"start"], ex_intervals.loc[1,"end"], alpha=alpha, color=cmap(color_levs[0]))
-    ax.axvspan(ex_intervals.loc[2,"start"], ex_intervals.loc[2,"end"], alpha=alpha, color=cmap(color_levs[1]))
-    ax.axvspan(ex_intervals.loc[3,"start"], ex_intervals.loc[3,"end"], alpha=alpha, color=cmap(color_levs[2]))
+    ax.axvspan(ex_intervals.loc[0,"start"], ex_intervals.loc[0,"end"], alpha=alpha, color=cmap(color_levs[0]))
+    ax.axvspan(ex_intervals.loc[1,"start"], ex_intervals.loc[1,"end"], alpha=alpha, color=cmap(color_levs[1]))
+    ax.axvspan(ex_intervals.loc[2,"start"], ex_intervals.loc[2,"end"], alpha=alpha, color=cmap(color_levs[2]))
 
     # second row subplot: response
     resp_ax = plt.subplot2grid((4, 3), loc=(1, 0), rowspan=1, colspan=3, fig=fig)
@@ -53,15 +53,15 @@ def current_injection_plot(current: nap.Tsd, spikes: nap.TsGroup,
     resp_ax.set_ylabel("Firing rate (Hz)")
     resp_ax.set_xlabel("Time (s)")
     resp_ax.set_title("Neural response", y=.95)
-    resp_ax.axvspan(ex_intervals.loc[1,"start"], ex_intervals.loc[1,"end"], alpha=alpha, color=cmap(color_levs[0]))
-    resp_ax.axvspan(ex_intervals.loc[2,"start"], ex_intervals.loc[2,"end"], alpha=alpha, color=cmap(color_levs[1]))
-    resp_ax.axvspan(ex_intervals.loc[3,"start"], ex_intervals.loc[3,"end"], alpha=alpha, color=cmap(color_levs[2]))
+    resp_ax.axvspan(ex_intervals.loc[0,"start"], ex_intervals.loc[0,"end"], alpha=alpha, color=cmap(color_levs[0]))
+    resp_ax.axvspan(ex_intervals.loc[1,"start"], ex_intervals.loc[1,"end"], alpha=alpha, color=cmap(color_levs[1]))
+    resp_ax.axvspan(ex_intervals.loc[2,"start"], ex_intervals.loc[2,"end"], alpha=alpha, color=cmap(color_levs[2]))
     ylim = resp_ax.get_ylim()
 
     # third subplot: zoomed responses
     zoom_axes = []
-    for i in range(len(ex_intervals)-1):
-        interval = ex_intervals.loc[[i+1]]
+    for i in range(len(ex_intervals)):
+        interval = ex_intervals.loc[[i]]
         ax = plt.subplot2grid((4, 3), loc=(2, i), rowspan=1, colspan=1, fig=fig)
         ax.plot(firing_rate.restrict(interval), color="k")
         ax.plot(spikes.restrict(interval).to_tsd([-1.5]), "|", color="k", ms=10)
