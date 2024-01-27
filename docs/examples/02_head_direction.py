@@ -136,7 +136,7 @@ plt.tight_layout()
 # and this may generate weird border artifacts. To avoid that, We can restrict the time axis to $t>1 \text{ sec}$.
 
 # set the size of the spike history window in seconds
-history_window = 0.3
+history_window = 0.8
 
 # define the count history window used for prediction
 history_interval = nap.IntervalSet(
@@ -445,10 +445,10 @@ full_features = np.repeat(full_features, len(spikes), 1)
 predicted_firing_rate = nap.TsdFrame(t=count[window_size:].t, d=np.asarray(model.predict(full_features)))
 
 cmap_label = "hsv"
-start=8910
-end=8960
+start = 8910
+end = 8960
 threshold_hz=1
-figsize=(12, 6)
+figsize = (12, 6)
 plot_ep = nap.IntervalSet(start, end)
 index_keep = spikes.restrict(plot_ep).getby_threshold("rate", threshold_hz).index
 
