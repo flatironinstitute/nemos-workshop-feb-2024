@@ -66,13 +66,13 @@ def get_sweep(sweep_number: int, fh: h5py.File):
     """ Retrieve the stimulus, response, index_range, and sampling rate
     for a particular sweep.  This method hides the NWB file's distinction
     between a "Sweep" and an "Experiment".  An experiment is a subset of
-    of a sweep that excludes the initial test pulse.  It also excludes
+    of a sweep that excludes the initial tests pulse.  It also excludes
     any erroneous response data at the end of the sweep (usually for
     ramp sweeps, where recording was terminated mid-stimulus).
 
     Some sweeps do not have an experiment, so full data arrays are
     returned.  Sweeps that have an experiment return full data arrays
-    (include the test pulse) with any erroneous data trimmed from the
+    (include the tests pulse) with any erroneous data trimmed from the
     back of the sweep.
 
     Parameters
@@ -88,7 +88,7 @@ def get_sweep(sweep_number: int, fh: h5py.File):
     :
         A dictionary with 'stimulus', 'response', 'index_range', and
         'sampling_rate' elements.  The index range is a 2-tuple where
-        the first element indicates the end of the test pulse and the
+        the first element indicates the end of the tests pulse and the
         second index is the end of valid response data.
     """
     swp = fh['epochs']['Sweep_%d' % sweep_number]
@@ -161,7 +161,7 @@ def get_sweep(sweep_number: int, fh: h5py.File):
 
 
 def get_sweep_numbers(fh):
-    """ Get all of the sweep numbers in the file, including test sweeps.
+    """ Get all of the sweep numbers in the file, including tests sweeps.
     """
     sweeps = [int(e.split('_')[1])
               for e in fh['epochs'].keys() if e.startswith('Sweep_')]
