@@ -477,6 +477,6 @@ predicted_firing_rate = nap.TsdFrame(t=count[window_size:].t, d=predicted_firing
 utils.plotting.plot_head_direction_tuning_model(tuning_curves, predicted_firing_rate, spikes, angle, threshold_hz=1,
                                                 start=8910, end=8960, cmap_label="hsv")
 
-# # %%
-# # ### Exercise
-# # What would happen if we regressed explicitly the head direction?
+# %%
+# ## Exercise
+# What would happen if we regressed explicitly the head direction?
