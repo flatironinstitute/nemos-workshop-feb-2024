@@ -260,7 +260,10 @@ model = utils.model.GLM(regularizer=nmo.regularizer.UnRegularized("LBFGS"))
 # predict ML paramametrs. Crop the first window_size (1 sec)
 # because we don't have the full count history to predict
 # these samples.
-model.fit(input_feature, neuron_count[window_size:])
+
+# Select 50% for training
+train_num_samp = round(input_feature.shape[0] * 0.5)
+model.fit(input_feature[:train_num_samp], neuron_count[window_size:][:train_num_samp])
 
 plt.figure()
 plt.title("spike history weights")
@@ -376,7 +379,7 @@ plt.legend()
 # Now that we have our "compressed" history feature matrix, we can fit the ML parameters for a GLM.
 
 model_basis = utils.model.GLM(regularizer=nmo.regularizer.UnRegularized("LBFGS"))
-model_basis.fit(conv_spk, neuron_count[window_size:])
+model_basis.fit(conv_spk[:train_num_samp], neuron_count[window_size:][:train_num_samp])
 
 # %%
 # We can plot the resulting response, noting that the weights we just learned needs to be "expanded" back
@@ -392,8 +395,14 @@ plt.legend()
 
 # compare model scores, as expected the training score is better with more parameters
 # this may could be over-fitting.
-print(f"full history score: {model.score(input_feature, neuron_count[window_size:])}")
-print(f"basis score: {model_basis.score(conv_spk, neuron_count[window_size:])}")
+print(f"full history train score: {model.score(input_feature[:train_num_samp], neuron_count[window_size:][:train_num_samp], score_type='pseudo-r2-Cohen')}")
+print(f"basis train score: {model_basis.score(conv_spk[:train_num_samp], neuron_count[window_size:][:train_num_samp], score_type='pseudo-r2-Cohen')}")
+
+# %%
+# To check that, let's try to see ho the model perform on unseen data.
+print(f"\nfull history test score: {model.score(input_feature[train_num_samp:], neuron_count[window_size:][train_num_samp:], score_type='pseudo-r2-Cohen')}")
+print(f"basis test score: {model_basis.score(conv_spk[train_num_samp:], neuron_count[window_size:][train_num_samp:], score_type='pseudo-r2-Cohen')}")
+
 
 # %%
 # ### All-to-all Connectivity
@@ -428,7 +437,7 @@ print(f"Convolved count reshaped: {convolved_count.shape}")
 # %%
 # Now fit the GLM for each neuron.
 
-use_tp = 15000
+
 models = []
 for neu in range(count.shape[1]):
     print(f"fitting neuron {neu}...")
@@ -436,7 +445,7 @@ for neu in range(count.shape[1]):
     model = utils.model.GLM(
         regularizer=nmo.regularizer.Ridge(regularizer_strength=0.1, solver_name="LBFGS")
     )
-    models.append(model.fit(convolved_count[:use_tp], count_neu[window_size:][:use_tp]))
+    models.append(model.fit(convolved_count[:train_num_samp], count_neu[window_size:][:train_num_samp]))
 
 
 # %%
@@ -471,6 +480,7 @@ for receiver_neu in range(count.shape[1]):
 
 predicted_firing_rate = nap.TsdFrame(t=count[window_size:].t, d=predicted_firing_rate)
 
+# plot fit result outside training
 utils.plotting.plot_head_direction_tuning_model(tuning_curves, predicted_firing_rate, spikes, angle, threshold_hz=1,
                                                 start=8910, end=8960, cmap_label="hsv")
 

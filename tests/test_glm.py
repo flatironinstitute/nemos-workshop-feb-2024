@@ -354,3 +354,31 @@ class TestGLM:
         model_tree.fit(X_tree, y, init_params=true_params_tree)
         model_tree.predict(X_tree)
         assert (isinstance(X_tree, nmo.pytrees.FeaturePytree))
+
+    def test_predict_reset_params(self, poissonGLM_model_instantiation_pytree):
+        X_tree, y, model_tree, true_params_tree, _ = poissonGLM_model_instantiation_pytree
+        X_tree["input_1"]
+        try:
+            model_tree.fit(X_tree, y, init_params=true_params_tree)
+            X_tree["input_1"] = X_tree["input_1"][:,:1]
+            model_tree.predict(X_tree)
+            raise ValueError("No exception raised")
+        except:
+            # check that the coeffs have been squeezed back even if
+            # predict did not go through
+            assert nmo.utils.pytree_map_and_reduce(lambda x, y: jax.numpy.array(x.shape) == np.array(y.shape), any,
+                                                   model_tree.coef_, true_params_tree[0])
+
+    def test_score_reset_params(self, poissonGLM_model_instantiation_pytree):
+        X_tree, y, model_tree, true_params_tree, _ = poissonGLM_model_instantiation_pytree
+        X_tree["input_1"]
+        try:
+            model_tree.fit(X_tree, y, init_params=true_params_tree)
+            X_tree["input_1"] = X_tree["input_1"][:,:1]
+            model_tree.score(X_tree, y)
+            raise ValueError("No exception raised")
+        except:
+            # check that the coeffs have been squeezed back even if
+            # predict did not go through
+            assert nmo.utils.pytree_map_and_reduce(lambda x, y: jax.numpy.array(x.shape) == np.array(y.shape), any,
+                                                   model_tree.coef_, true_params_tree[0])

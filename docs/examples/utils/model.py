@@ -64,9 +64,11 @@ class GLM(nmo.glm.GLM):
         )
         if isinstance(X, nmo.pytrees.FeaturePytree):
             X = X.data
-        super().fit(X, y, init_params=init_params)
-        self.coef_ = jax.tree_map(np.squeeze, self.coef_)
-        self.intercept_ = jax.tree_map(np.squeeze, self.intercept_)
+        try:
+            super().fit(X, y, init_params=init_params)
+        finally:
+            self.coef_ = jax.tree_map(np.squeeze, self.coef_)
+            self.intercept_ = jax.tree_map(np.squeeze, self.intercept_)
         return self
 
     def predict(self, X: DESIGN_INPUT_TYPE) -> jnp.ndarray:
@@ -77,9 +79,11 @@ class GLM(nmo.glm.GLM):
             X = X.data
         self.coef_ = jax.tree_map(lambda x: np.expand_dims(x, axis=0), self.coef_)
         self.intercept_ = jax.tree_map(lambda x: np.expand_dims(x, axis=0), self.intercept_)
-        rate = super().predict(X)
-        self.coef_ = jax.tree_map(np.squeeze, self.coef_)
-        self.intercept_ = jax.tree_map(np.squeeze, self.intercept_)
+        try:
+            rate = super().predict(X)
+        finally:
+            self.coef_ = jax.tree_map(np.squeeze, self.coef_)
+            self.intercept_ = jax.tree_map(np.squeeze, self.intercept_)
         return jax.numpy.squeeze(rate)
 
     def score(
@@ -100,9 +104,11 @@ class GLM(nmo.glm.GLM):
             X = X.data
         self.coef_ = jax.tree_map(lambda x: np.expand_dims(x, axis=0), self.coef_)
         self.intercept_ = jax.tree_map(lambda x: np.expand_dims(x, axis=0), self.intercept_)
-        score = super().score(X, y, score_type=score_type)
-        self.coef_ = jax.tree_map(np.squeeze, self.coef_)
-        self.intercept_ = jax.tree_map(np.squeeze, self.intercept_)
+        try:
+            score = super().score(X, y, score_type=score_type)
+        finally:
+            self.coef_ = jax.tree_map(np.squeeze, self.coef_)
+            self.intercept_ = jax.tree_map(np.squeeze, self.intercept_)
         return score
 
     @staticmethod
