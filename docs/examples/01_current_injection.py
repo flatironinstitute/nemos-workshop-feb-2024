@@ -79,8 +79,7 @@ jax.config.update("jax_enable_x64", True)
 # On subsequent runs, the cell gets skipped: we do not need to redownload the
 # data.
 
-path = os.path.join(os.getcwd(), "allen_478498617.nwb")
-utils.data.download_data(path, "https://osf.io/vf2nj/download")
+path = utils.data.download_data("allen_478498617.nwb", "https://osf.io/vf2nj/download")
 
 # %%
 # ## Pynapple
