@@ -30,7 +30,7 @@ plt.style.use('./utils/nemos.mplstyle')
 
 path = os.path.join(os.getcwd(), "Mouse32-140822.nwb")
 if os.path.basename(path) not in os.listdir(os.getcwd()):
-    r = requests.get(f"https://osf.io/jb2gd/download", stream=True)
+    r = requests.get(f"https://osf.io/xesdm/download", stream=True)
     block_size = 1024 * 1024
     with open(path, "wb") as f:
         for data in tqdm.tqdm(
