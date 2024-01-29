@@ -53,8 +53,8 @@ class GLM(nmo.glm.GLM):
             if len(init_params) != 2:
                 raise ValueError("Params must have length two.")
             init_params = (
-                jax.tree_map(lambda x: np.expand_dims(x, axis=0), init_params[0]),
-                init_params[1],
+                jax.tree_map(lambda x: np.expand_dims(np.asarray(x, dtype=float), axis=0), init_params[0]),
+                jax.tree_map(lambda x: np.expand_dims(np.asarray(x, dtype=float), axis=0), init_params[1]),
             )
         X = jax.tree_map(
             lambda x: jax.numpy.expand_dims(jax.numpy.asarray(x), axis=1), X
@@ -62,17 +62,24 @@ class GLM(nmo.glm.GLM):
         y = jax.tree_map(
             lambda x: jax.numpy.expand_dims(jax.numpy.asarray(x), axis=1), y
         )
+        if isinstance(X, nmo.pytrees.FeaturePytree):
+            X = X.data
         super().fit(X, y, init_params=init_params)
         self.coef_ = jax.tree_map(np.squeeze, self.coef_)
+        self.intercept_ = jax.tree_map(np.squeeze, self.intercept_)
         return self
 
     def predict(self, X: DESIGN_INPUT_TYPE) -> jnp.ndarray:
         X = jax.tree_map(
             lambda x: jax.numpy.expand_dims(jax.numpy.asarray(x), axis=1), X
         )
+        if isinstance(X, nmo.pytrees.FeaturePytree):
+            X = X.data
         self.coef_ = jax.tree_map(lambda x: np.expand_dims(x, axis=0), self.coef_)
+        self.intercept_ = jax.tree_map(lambda x: np.expand_dims(x, axis=0), self.intercept_)
         rate = super().predict(X)
         self.coef_ = jax.tree_map(np.squeeze, self.coef_)
+        self.intercept_ = jax.tree_map(np.squeeze, self.intercept_)
         return jax.numpy.squeeze(rate)
 
     def score(
@@ -89,9 +96,13 @@ class GLM(nmo.glm.GLM):
         y = jax.tree_map(
             lambda x: jax.numpy.expand_dims(jax.numpy.asarray(x), axis=1), y
         )
+        if isinstance(X, nmo.pytrees.FeaturePytree):
+            X = X.data
         self.coef_ = jax.tree_map(lambda x: np.expand_dims(x, axis=0), self.coef_)
+        self.intercept_ = jax.tree_map(lambda x: np.expand_dims(x, axis=0), self.intercept_)
         score = super().score(X, y, score_type=score_type)
         self.coef_ = jax.tree_map(np.squeeze, self.coef_)
+        self.intercept_ = jax.tree_map(np.squeeze, self.intercept_)
         return score
 
     @staticmethod
@@ -105,7 +116,7 @@ class GLM(nmo.glm.GLM):
         if not (X is None):
             if nmo.utils.pytree_map_and_reduce(lambda x: x.ndim != 3, any, X):
                 raise ValueError(
-                    "X must be two-dimensional, with shape (n_timebins, n_features) or pytree of the same"
+                    "X must be two-dimensional, with shape (n_timebins, n_features) or pytree of the same shape"
                 )
 
     @staticmethod
@@ -175,8 +186,8 @@ class GLM(nmo.glm.GLM):
 
         if params[1].ndim != 1:
             raise ValueError(
-                "params[1] must be one-dimensional but "
-                f"params[1] has {params[1].ndim} dimensions!"
+                "params[1] must be a scalar but "
+                f"params[1] has {params[1].ndim - 1} dimensions!"
             )
 
         if params[1].shape[0] != 1:
@@ -184,3 +195,17 @@ class GLM(nmo.glm.GLM):
                 f"Exactly one intercept term must be provided. {params[1].shape[0]} intercepts provided instead!"
             )
         return params
+
+    @staticmethod
+    def _check_input_n_timepoints(X: Union[nmo.pytrees.FeaturePytree, jnp.ndarray], y: jnp.ndarray):
+        if nmo.utils.pytree_map_and_reduce(
+                lambda x: jax.tree_map(lambda array: y.shape[0] != array.shape[0], x),
+                any,
+                X
+                ):
+            shape = nmo.utils.pytree_map_and_reduce(lambda x: x.shape[0], lambda x: x[0], X)
+            raise ValueError(
+                "The number of time-points in X and y must agree. "
+                f"X has {shape} time-points, "
+                f"y has {y.shape[0]} instead!"
+            )

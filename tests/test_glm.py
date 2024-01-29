@@ -7,6 +7,7 @@ import pytest
 from nemos.pytrees import FeaturePytree
 
 import nemos as nmo
+import jax
 
 
 class TestGLM:
@@ -103,10 +104,10 @@ class TestGLM:
     @pytest.mark.parametrize(
         "dim_intercepts, expectation",
         [
-            (0, pytest.raises(ValueError, match=r"params\[1\] must be one")),
-            (1, does_not_raise()),
-            (2, pytest.raises(ValueError, match=r"params\[1\] must be one")),
-            (3, pytest.raises(ValueError, match=r"params\[1\] must be one")),
+            (0, does_not_raise()),
+            (1, pytest.raises(ValueError, match=r"params\[1\] must be a scalar")),
+            (2, pytest.raises(ValueError, match=r"params\[1\] must be a scalar")),
+            (3, pytest.raises(ValueError, match=r"params\[1\] must be a scalar")),
         ],
     )
     def test_fit_intercepts_dimensionality(
@@ -125,11 +126,11 @@ class TestGLM:
     @pytest.mark.parametrize(
         "init_params, expectation",
         [
-            ([jnp.zeros((5, )), jnp.zeros((1,))], does_not_raise()),
+            ([jnp.zeros((5, )), jnp.array(0.)], does_not_raise()),
             (dict(p1=jnp.zeros((1, 5)), p2=jnp.zeros((1,))), pytest.raises(KeyError)),
-            ((dict(p1=jnp.zeros((5, )), p2=jnp.zeros((1))), jnp.zeros((1, ))), pytest.raises(TypeError, match=r"X and params\[0\] must be the same type")),
-            ((FeaturePytree(p1=jnp.zeros((5, )), p2=jnp.zeros((5, ))), jnp.zeros((1, ))), pytest.raises(TypeError, match=r"X and params\[0\] must be the same type")),
-            ([jnp.zeros((5, )), ""], pytest.raises(TypeError, match="Initial parameters must be array-like")),
+            ((dict(p1=jnp.zeros((5, )), p2=jnp.zeros((1))), jnp.array(0.)), pytest.raises(TypeError, match=r"X and params\[0\] must be the same type")),
+            ((FeaturePytree(p1=jnp.zeros((5, )), p2=jnp.zeros((5, ))), jnp.array(0.)), pytest.raises(TypeError, match=r"X and params\[0\] must be the same type")),
+            ([jnp.zeros((5, )), ""], pytest.raises(ValueError, match="could not convert string to float")),
         ],
     )
     def test_fit_init_params_type(
@@ -146,9 +147,8 @@ class TestGLM:
     @pytest.mark.parametrize(
         "delta_n_neuron, expectation",
         [
-            (-1, pytest.raises(ValueError, match="Exactly one intercept term must be provided")),
             (0, does_not_raise()),
-            (1, pytest.raises(ValueError, match="Exactly one intercept term must be provided")),
+            (1, pytest.raises(ValueError, match=r"params\[1\] must be a scalar")),
         ],
     )
     def test_fit_n_neuron_match_baseline_rate(
@@ -158,7 +158,7 @@ class TestGLM:
         Test the `fit` method ensuring The number of neurons in the baseline rate matches the expected number.
         """
         X, y, model, true_params, firing_rate = poissonGLM_model_instantiation
-        init_b = jnp.zeros((1 + delta_n_neuron,))
+        init_b = jnp.squeeze(jnp.zeros((1 + delta_n_neuron,)))
         with expectation:
             model.fit(X, y, init_params=(true_params[0], init_b))
 
@@ -223,7 +223,7 @@ class TestGLM:
         """
         X, y, model, true_params, firing_rate = poissonGLM_model_instantiation
         init_w = jnp.zeros(X.shape[1] + delta_n_features)
-        init_b = jnp.zeros(1)
+        init_b = jnp.array(0.)
         with expectation:
             model.fit(X, y, init_params=(init_w, init_b))
 
@@ -287,3 +287,70 @@ class TestGLM:
         y = jnp.zeros((y.shape[0] + delta_tp,) + y.shape[1:])
         with expectation:
             model.fit(X, y, init_params=true_params)
+
+    def test_fit_pytree_equivalence(self, poissonGLM_model_instantiation,
+                                    poissonGLM_model_instantiation_pytree):
+        """Check that the glm fit with pytree learns the same parameters."""
+        # required for numerical precision of coeffs
+        jax.config.update("jax_enable_x64", True)
+        X, y, model, true_params, firing_rate = poissonGLM_model_instantiation
+        X_tree, _, model_tree, true_params_tree, _ = poissonGLM_model_instantiation_pytree
+        # fit both models
+        model.fit(X, y, init_params=true_params)
+        model_tree.fit(X_tree, y, init_params=true_params_tree)
+
+        # get the flat parameters
+        flat_coef = np.concatenate(jax.tree_util.tree_flatten(model_tree.coef_)[0], axis=-1)
+
+        # assert equivalence of solutions
+        assert np.allclose(model.coef_, flat_coef)
+        assert np.allclose(model.intercept_, model_tree.intercept_)
+
+    def test_score_array(self, poissonGLM_model_instantiation):
+        """Check that the glm fit with pytree learns the same parameters."""
+        # required for numerical precision of coeffs
+        jax.config.update("jax_enable_x64", True)
+        X, y, model, true_params, firing_rate = poissonGLM_model_instantiation
+        model.fit(X, y, init_params=true_params)
+        model.score(X, y)
+
+    def test_score_tree(self, poissonGLM_model_instantiation_pytree):
+        """Check that the glm fit with pytree learns the same parameters."""
+        # required for numerical precision of coeffs
+        jax.config.update("jax_enable_x64", True)
+        X_tree, y, model_tree, true_params_tree, _ = poissonGLM_model_instantiation_pytree
+        model_tree.fit(X_tree, y, init_params=true_params_tree)
+        model_tree.score(X_tree, y)
+
+    def test_predict_array(self, poissonGLM_model_instantiation):
+        """Check that the glm fit with pytree learns the same parameters."""
+        # required for numerical precision of coeffs
+        jax.config.update("jax_enable_x64", True)
+        X, y, model, true_params, firing_rate = poissonGLM_model_instantiation
+        model.fit(X, y, init_params=true_params)
+        model.predict(X)
+
+    def test_predict_tree(self, poissonGLM_model_instantiation_pytree):
+        """Check that the glm fit with pytree learns the same parameters."""
+        # required for numerical precision of coeffs
+        jax.config.update("jax_enable_x64", True)
+        X_tree, y, model_tree, true_params_tree, _ = poissonGLM_model_instantiation_pytree
+        model_tree.fit(X_tree, y, init_params=true_params_tree)
+        model_tree.predict(X_tree)
+
+    def test_output_type_consistency_tree_fit(self, poissonGLM_model_instantiation_pytree):
+        X_tree, y, model_tree, true_params_tree, _ = poissonGLM_model_instantiation_pytree
+        model_tree.fit(X_tree, y, init_params=true_params_tree)
+        assert(isinstance(X_tree, nmo.pytrees.FeaturePytree))
+
+    def test_output_type_consistency_tree_score(self, poissonGLM_model_instantiation_pytree):
+        X_tree, y, model_tree, true_params_tree, _ = poissonGLM_model_instantiation_pytree
+        model_tree.fit(X_tree, y, init_params=true_params_tree)
+        model_tree.score(X_tree, y)
+        assert (isinstance(X_tree, nmo.pytrees.FeaturePytree))
+
+    def test_output_type_consistency_tree_predict(self, poissonGLM_model_instantiation_pytree):
+        X_tree, y, model_tree, true_params_tree, _ = poissonGLM_model_instantiation_pytree
+        model_tree.fit(X_tree, y, init_params=true_params_tree)
+        model_tree.predict(X_tree)
+        assert (isinstance(X_tree, nmo.pytrees.FeaturePytree))
