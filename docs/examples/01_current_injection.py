@@ -44,10 +44,12 @@ import nemos as nmo
 import nemos.glm
 import numpy as np
 import pynapple as nap
+import sys
+sys.path.append('..')
 import utils
 
 # configure plots some
-plt.style.use('./utils/nemos.mplstyle')
+plt.style.use('../utils/nemos.mplstyle')
 
 # Set the default precision to float64, which is generally a good idea for
 # optimization purposes.
@@ -367,9 +369,10 @@ utils.plotting.tuning_curve_plot(tuning_curve)
 #   n_neurons)`. `n_time_bins` (as discussed above) and `n_neurons` must have
 #   the same value for both the predictors and spike counts.
 #
-# - predictors and spike counts must be `jax.numpy` arrays. As we'll see, we
-#   can easily convert between `jax.numpy` arrays, numpy arrays, and pynapple
-#   objects. -- add link to jax.numpy
+# - predictors and spike counts must be
+#   [`jax.numpy`](https://jax.readthedocs.io/en/latest/jax-101/01-jax-basics.html)
+#   arrays. As we'll see, we can easily convert between `jax.numpy` arrays,
+#   numpy arrays, and pynapple objects.
 #
 # !!! info "What is jax?"
 #
@@ -385,6 +388,10 @@ utils.plotting.tuning_curve_plot(tuning_curve)
 # spike counts to the proper resolution using the
 # [`bin_average`](https://pynapple-org.github.io/pynapple/reference/core/time_series/#pynapple.core.time_series.TsdTensor.bin_average)
 # method from pynapple:
+#
+# <div class="notes">
+#   - need to make sure current and spikes have same number of time points
+# </div>
 
 binned_current = current.bin_average(bin_size)
 
@@ -645,12 +652,11 @@ print(f"log-likelihood: {log_likelihood}")
 # compared across datasets (because e.g., it won't account for difference in
 # noise levels). We provide the ability to compute the pseudo-$R^2$ for this
 # purpose:
-
 model.score(predictor, count, score_type='pseudo-r2-Cohen')
 
 # %%
 #
-# ## Further Exercises
+# ## Further Exercises {.strip-headers}
 #
 # Despite the simplicity of this dataset, there is still more that we can do
 # here. The following sections provide some possible exercises to try yourself!

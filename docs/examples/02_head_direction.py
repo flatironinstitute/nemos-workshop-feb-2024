@@ -18,6 +18,8 @@ import numpy as np
 import pynapple as nap
 import requests
 import tqdm
+import sys
+sys.path.append('..')
 import utils
 
 jax.config.update("jax_enable_x64", True)
@@ -114,7 +116,7 @@ count = nap.TsdFrame(t=count.t, d=count.values[:,pref_ang.reset_index(drop=True)
 
 
 # %%
-# ## NEMOS
+# ## NEMOS {.strip-code}
 # It's time to use nemos. Our goal is to estimate the pairwise interaction between neurons.
 # This can be quantified with a GLM if we use the past neuronal activity to predict the next time step.
 # Before seeing how to model an entire neuronal populaiton, let's see how we can model a single neuron in this way.

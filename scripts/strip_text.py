@@ -1,0 +1,85 @@
+#!/usr/bin/env python3
+
+from mkdocs_gallery import py_source_parser, gen_single
+import re
+import click
+import os
+import glob
+
+# regex from mkdocs_gallery for grabbing titles
+MD_TITLE_MARKER = re.compile(r"^[ ]*([#]+)[ ]*(.*)[ ]*$")  # One or more starting hash with optional whitespaces before.
+RE_3_OR_MORE_NON_ASCII = r"([\W _])\1{3,}"  # 3 or more identical chars
+FIRST_NON_MARKER_WITHOUT_HASH = re.compile(rf"^[# ]*(?!{RE_3_OR_MORE_NON_ASCII})[# ]*(.+)", re.MULTILINE)
+DIV_START = re.compile(r"<div")
+DIV_END = re.compile(r"</div")
+
+def convert(path: str):
+    """Strip out code.
+
+    This uses mkdocs_gallery's parser to go through one of our notebooks and:
+
+    - Remove all markdown cells except:
+      - headers
+      - notes (within <div> tags with class=notes)
+    - If a header has the class .strip-headers, then we remove all headers
+      beneath it (but not itself)
+    - If a header has the class .strip-code, then we remove all code blocks
+      beneath it, until we hit another header with the *same* level without
+      that class
+    - Else, code is preserved
+
+    """
+    conf, source_blocks = py_source_parser.split_code_and_text_blocks(path)
+    title_paragraph = gen_single.extract_paragraphs(source_blocks[0][1])[0]
+    match = FIRST_NON_MARKER_WITHOUT_HASH.search(title_paragraph)
+    title = match.group(2).strip()
+    text = []
+    most_recent_header_chain = [(1, title)]
+    output_blocks = [f"# -*- coding: utf-8 -*-\n\"\"\"{match.group(0)}\"\"\""]
+    in_note = False
+    for block_type, block_txt, line_no in source_blocks[1:]:
+        if block_type == 'text':
+            block = []
+            for line in block_txt.splitlines():
+                header = MD_TITLE_MARKER.search(line)
+                if header:
+                    header_lvl = len(header.group(1))
+                    header_txt = header.group(2).strip()
+                    while header_lvl <= most_recent_header_chain[-1][0]:
+                        most_recent_header_chain = most_recent_header_chain[:-1]
+                    most_recent_header_chain.append((header_lvl, header_txt))
+                    # strip headers beneath this one, not including it
+                    if not any(['.strip-headers' in h[1] for h in most_recent_header_chain[:-1]]):
+                        block.append(header.group(0).strip())
+                else:
+                    if DIV_END.search(line):
+                        in_note = False
+                        block.append('')
+                    elif in_note:
+                        block.append(line)
+                    elif DIV_START.search(line) and 'notes' in line:
+                        in_note = True
+                        block.append('')
+            if block:
+                output_blocks.append('\n# %%\n# ' + '\n# '.join(block))
+        if block_type == 'code':
+            if not any(['.strip-code' in h[1] for h in most_recent_header_chain]):
+                output_blocks.append('\n# %%\n' + block_txt)
+    return output_blocks
+
+
+@click.command()
+@click.option("--input_dir", default='docs/examples', help='Directory containing files to convert',
+              show_default=True)
+@click.option("--output_dir", default='docs/just_code', show_default=True,
+              help='Directory to place converted files at. Must exist.')
+def main(input_dir: str, output_dir: str):
+    for f in glob.glob(os.path.join(input_dir, '*py')):
+        blocks = convert(f)
+        out_fn = os.path.split(f)[-1].replace('.py', '_code.py')
+        with open(os.path.join(output_dir, out_fn), 'w') as out_f:
+            out_f.write('\n'.join(blocks))
+
+
+if __name__ == '__main__':
+    main()

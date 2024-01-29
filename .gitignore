@@ -180,3 +180,6 @@ nwb-cache/
 
 # nwb files
 *.nwb
+
+# don't add files here, generate them
+docs/just_code

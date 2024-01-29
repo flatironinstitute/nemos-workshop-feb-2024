@@ -17,9 +17,13 @@ plugins:
     - gallery:
           conf_script: docs/gallery_conf.py
           # path to the directory containing our examples/tutorials
-          examples_dirs: docs/examples
+          examples_dirs:
+            - docs/examples
+            - docs/just_code
           # path to the directory where mkdocs will save the generated output
-          gallery_dirs: docs/generated/gallery
+          gallery_dirs:
+            - docs/generated/gallery
+            - docs/generated/just_code
 
 markdown_extensions:
   - attr_list
@@ -37,3 +41,4 @@ extra_css:
 nav:
     - Home: index.md
     - Tutorials: generated/gallery
+    - Just code: generated/just_code
