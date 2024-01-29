@@ -13,7 +13,7 @@ FIRST_NON_MARKER_WITHOUT_HASH = re.compile(rf"^[# ]*(?!{RE_3_OR_MORE_NON_ASCII})
 DIV_START = re.compile(r"<div")
 DIV_END = re.compile(r"</div")
 
-def convert(path: str):
+def convert(path: str, follow_strip_classes=True):
     """Strip out code.
 
     This uses mkdocs_gallery's parser to go through one of our notebooks and:
@@ -27,6 +27,9 @@ def convert(path: str):
       beneath it, until we hit another header with the *same* level without
       that class
     - Else, code is preserved
+
+    if follow_strip_classes is False, we ignore the .strip-code and
+    .strip-headers classes (and thus keep all code and headers)
 
     """
     conf, source_blocks = py_source_parser.split_code_and_text_blocks(path)
@@ -49,9 +52,11 @@ def convert(path: str):
                         most_recent_header_chain = most_recent_header_chain[:-1]
                     most_recent_header_chain.append((header_lvl, header_txt))
                     # strip headers beneath this one, not including it
-                    if not any(['.strip-headers' in h[1] for h in most_recent_header_chain[:-1]]):
+                    if not any(['.strip-headers' in h[1] for h in most_recent_header_chain[:-1]]) or not follow_strip_classes:
                         block.append(header.group(0).strip())
                 else:
+                    if any(['.keep-text' in h[1] for h in most_recent_header_chain]):
+                        block.append(line)
                     if DIV_END.search(line):
                         in_note = False
                         block.append('')
@@ -63,7 +68,7 @@ def convert(path: str):
             if block:
                 output_blocks.append('\n# %%\n# ' + '\n# '.join(block))
         if block_type == 'code':
-            if not any(['.strip-code' in h[1] for h in most_recent_header_chain]):
+            if not any(['.strip-code' in h[1] for h in most_recent_header_chain]) or not follow_strip_classes:
                 output_blocks.append('\n# %%\n' + block_txt)
     return output_blocks
 
@@ -71,13 +76,19 @@ def convert(path: str):
 @click.command()
 @click.option("--input_dir", default='docs/examples', help='Directory containing files to convert',
               show_default=True)
-@click.option("--output_dir", default='docs/just_code', show_default=True,
-              help='Directory to place converted files at. Must exist.')
-def main(input_dir: str, output_dir: str):
+@click.option("--output_dir", default='docs/for_users', show_default=True,
+              help='Directory to place converted files at. Must exist. (Intended for workshop attendees)')
+@click.option("--ignore_classes_dir", default='docs/just_code', show_default=True,
+              help='Directory to place converted files (ignoring classes) at. Must exist. These files ignore the .strip-code and .strip-headers classes. (Intended for workshop presenters)')
+def main(input_dir: str, output_dir: str, ignore_classes_dir: str):
     for f in glob.glob(os.path.join(input_dir, '*py')):
-        blocks = convert(f)
-        out_fn = os.path.split(f)[-1].replace('.py', '_code.py')
+        blocks = convert(f, True)
+        out_fn = os.path.split(f)[-1].replace('.py', '_users.py')
         with open(os.path.join(output_dir, out_fn), 'w') as out_f:
+            out_f.write('\n'.join(blocks))
+        blocks = convert(f, False)
+        out_fn = os.path.split(f)[-1].replace('.py', '_code.py')
+        with open(os.path.join(ignore_classes_dir, out_fn), 'w') as out_f:
             out_f.write('\n'.join(blocks))
 
 

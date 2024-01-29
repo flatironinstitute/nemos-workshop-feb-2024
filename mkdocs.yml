@@ -20,10 +20,12 @@ plugins:
           examples_dirs:
             - docs/examples
             - docs/just_code
+            - docs/for_users
           # path to the directory where mkdocs will save the generated output
           gallery_dirs:
             - docs/generated/gallery
             - docs/generated/just_code
+            - docs/generated/for_users
 
 markdown_extensions:
   - attr_list
@@ -40,5 +42,6 @@ extra_css:
 
 nav:
     - Home: index.md
-    - Tutorials: generated/gallery
-    - Just code: generated/just_code
+    - Full tutorials: generated/gallery
+    - For users: generated/for_users
+    - For presenters: generated/just_code

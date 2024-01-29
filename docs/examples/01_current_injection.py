@@ -390,7 +390,8 @@ utils.plotting.tuning_curve_plot(tuning_curve)
 # method from pynapple:
 #
 # <div class="notes">
-#   - need to make sure current and spikes have same number of time points
+#   - Get data from pynapple to nemos-ready format:
+#   - predictors and spikes must have same number of time points
 # </div>
 
 binned_current = current.bin_average(bin_size)
@@ -414,6 +415,10 @@ print(f"count sampling rate: {count.rate/1000:.02f} KHz")
 # use
 # [`np.expand_dims`](https://numpy.org/doc/stable/reference/generated/numpy.expand_dims.html)
 # to handle this.
+#
+# <div class="notes">
+#   - predictors must be 2d, spikes 1d
+# </div>
 
 # add singleton dimensions for axis 1 and 2.
 predictor = np.expand_dims(binned_current, (1, 2))
@@ -428,6 +433,10 @@ print(f"count shape: {count.shape}")
 # %%
 #
 # Our last step is to convert these to `jax.numpy` arrays.
+#
+# <div class="notes">
+#   - predictors and spikes must be jax arrays
+# </div>
 
 predictor = jax.numpy.asarray(predictor.values)
 count = jax.numpy.asarray(count.values)
@@ -491,6 +500,10 @@ count = jax.numpy.asarray(count.values)
 #     the problem. This means that LBFGS tends to find a solution faster and is
 #     often less sensitive to step-size. Try other solvers to see how they
 #     behave!
+#
+# <div class="notes">
+#   - GLM objects need regularizers and observation models
+# </div>
 
 model = nmo.glm.GLM(regularizer=nmo.regularizer.UnRegularized(solver_name="LBFGS"))
 
@@ -500,6 +513,10 @@ model = nmo.glm.GLM(regularizer=nmo.regularizer.UnRegularized(solver_name="LBFGS
 # fit our data! In the previous section, we prepared our model matrix
 # (`predictor`) and target data (`count`), so to fit the model we just need to
 # pass them to the model:
+#
+# <div class="notes">
+#   - call fit and retrieve parameters
+# </div>
 
 model.fit(predictor, count)
 
@@ -532,6 +549,10 @@ print(f"intercept_ shape: {model.intercept_.shape}")
 # the smoothed spike train. By calling `predict()` we can get the model's
 # predicted firing rate for this data. Note that this is just the output of the
 # model's linear-nonlinear step, as described earlier!
+#
+# <div class="notes">
+#   - generate and examine model predictions.
+# </div>
 
 predicted_fr = model.predict(predictor)
 # convert units from spikes/bin to spikes/sec
@@ -577,6 +598,10 @@ utils.plotting.current_injection_plot(current, spikes, firing_rate,
 #
 # To get a better sense, let's look at the mean firing rate over the whole
 # period:
+#
+# <div class="notes">
+#   - what do we see?
+# </div>
 
 # compare observed mean firing rate with the model predicted one
 print(f"Observed mean firing rate: {np.mean(count) / bin_size} Hz")
@@ -591,6 +616,10 @@ print(f"Predicted mean firing rate: {np.mean(predicted_fr)} Hz")
 # We can see this more directly by computing the tuning curve for our predicted
 # firing rate and comparing that against our smoothed spike train from the
 # beginning of this notebook. Pynapple can help us again with this:
+#
+# <div class="notes">
+#   - examine tuning curve -- what do we see?
+# </div>
 
 tuning_curve_model = nap.compute_1d_tuning_curves_continuous(predicted_fr, current, 15)
 fig = utils.plotting.tuning_curve_plot(tuning_curve)
@@ -615,6 +644,10 @@ fig.axes[0].legend()
 # model, but the firing rate is just the output of *LN*, its first two steps.
 # The firing rate is just the mean of a Poisson process, so we can pass it to
 # `jax.random.poisson`:
+#
+# <div class="notes">
+#   - Finally, let's look at spiking and scoring/metrics
+# </div>
 
 spikes = jax.random.poisson(jax.random.PRNGKey(0), predicted_fr.values)
 
@@ -657,6 +690,10 @@ model.score(predictor, count, score_type='pseudo-r2-Cohen')
 # %%
 #
 # ## Further Exercises {.strip-headers}
+#
+# <div class="notes">
+#   - what else can we do?
+# </div>
 #
 # Despite the simplicity of this dataset, there is still more that we can do
 # here. The following sections provide some possible exercises to try yourself!
@@ -705,7 +742,7 @@ model.score(predictor, count, score_type='pseudo-r2-Cohen')
 # return to this example after you've learned about `Basis` objects and how to
 # use them.
 #
-# ## Citation
+# ## Citation {.keep-text}
 #
 # The data used in this tutorial is from the Allen Brain Map, with the
 # [following
