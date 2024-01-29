@@ -19,6 +19,7 @@ import tqdm
 import utils
 
 jax.config.update("jax_enable_x64", True)
+plt.style.use('./utils/nemos.mplstyle')
 
 # %%
 # ## DATA STREAMING
