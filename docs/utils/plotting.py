@@ -43,9 +43,9 @@ def current_injection_plot(current: nap.Tsd, spikes: nap.TsGroup,
     ax.set_ylabel("Current (pA)")
     ax.set_title("Injected Current")
     ax.set_xticklabels([])
-    ax.axvspan(ex_intervals.loc[1,"start"], ex_intervals.loc[1,"end"], alpha=alpha, color=cmap(color_levs[0]))
-    ax.axvspan(ex_intervals.loc[2,"start"], ex_intervals.loc[2,"end"], alpha=alpha, color=cmap(color_levs[1]))
-    ax.axvspan(ex_intervals.loc[3,"start"], ex_intervals.loc[3,"end"], alpha=alpha, color=cmap(color_levs[2]))
+    ax.axvspan(ex_intervals.loc[0,"start"], ex_intervals.loc[0,"end"], alpha=alpha, color=cmap(color_levs[0]))
+    ax.axvspan(ex_intervals.loc[1,"start"], ex_intervals.loc[1,"end"], alpha=alpha, color=cmap(color_levs[1]))
+    ax.axvspan(ex_intervals.loc[2,"start"], ex_intervals.loc[2,"end"], alpha=alpha, color=cmap(color_levs[2]))
 
     # second row subplot: response
     resp_ax = plt.subplot2grid((4, 3), loc=(1, 0), rowspan=1, colspan=3, fig=fig)
@@ -56,15 +56,15 @@ def current_injection_plot(current: nap.Tsd, spikes: nap.TsGroup,
     resp_ax.set_ylabel("Firing rate (Hz)")
     resp_ax.set_xlabel("Time (s)")
     resp_ax.set_title("Neural response", y=.95)
-    resp_ax.axvspan(ex_intervals.loc[1,"start"], ex_intervals.loc[1,"end"], alpha=alpha, color=cmap(color_levs[0]))
-    resp_ax.axvspan(ex_intervals.loc[2,"start"], ex_intervals.loc[2,"end"], alpha=alpha, color=cmap(color_levs[1]))
-    resp_ax.axvspan(ex_intervals.loc[3,"start"], ex_intervals.loc[3,"end"], alpha=alpha, color=cmap(color_levs[2]))
+    resp_ax.axvspan(ex_intervals.loc[0,"start"], ex_intervals.loc[0,"end"], alpha=alpha, color=cmap(color_levs[0]))
+    resp_ax.axvspan(ex_intervals.loc[1,"start"], ex_intervals.loc[1,"end"], alpha=alpha, color=cmap(color_levs[1]))
+    resp_ax.axvspan(ex_intervals.loc[2,"start"], ex_intervals.loc[2,"end"], alpha=alpha, color=cmap(color_levs[2]))
     ylim = resp_ax.get_ylim()
 
     # third subplot: zoomed responses
     zoom_axes = []
-    for i in range(len(ex_intervals)-1):
-        interval = ex_intervals.loc[[i+1]]
+    for i in range(len(ex_intervals)):
+        interval = ex_intervals.loc[[i]]
         ax = plt.subplot2grid((4, 3), loc=(2, i), rowspan=1, colspan=1, fig=fig)
         ax.plot(firing_rate.restrict(interval), color="k")
         ax.plot(spikes.restrict(interval).to_tsd([-1.5]), "|", color="k", ms=10)
@@ -152,9 +152,10 @@ def lnp_schematic(input_feature: nap.Tsd,
             axes[i, 3].set_frame_on(False)
             axes[i, 3].xaxis.set_visible(False)
             axes[i, 3].yaxis.set_visible(False)
+            ax = None
             for j in range(3):
-                ax = fig.add_subplot(gs[j, 0])
-                spikes = jax.random.poisson(jax.random.PRNGKey(j * i + j + i), l)
+                ax = fig.add_subplot(gs[j, 0], sharey=ax)
+                spikes = jax.random.poisson(jax.random.PRNGKey(j*i + j + i), l)
                 spike_times = np.where(spikes)
                 spike_heights = spikes[spike_times]
                 ax.vlines(times[spike_times], 0, spike_heights, color='k')
@@ -167,7 +168,7 @@ def lnp_schematic(input_feature: nap.Tsd,
     else:
         for i, _ in enumerate(nonlinear):
             axes[i, 3].set_visible(False)
-    suptitles = ["Input", "Linear", "Nonlinear", "Poisson samples\n(spikes)"]
+    suptitles = ["Input", "Linear", "Nonlinear", "Poisson samples\n(spike histogram)"]
     suptitles_to_add = [True, True, plot_nonlinear, plot_spikes]
     for b, ax, t in zip(suptitles_to_add, axes[0, :], suptitles):
         if b:

@@ -10,6 +10,17 @@ build:
   os: ubuntu-22.04
   tools:
     python: "3.10"
+  jobs:
+    pre_build:
+      - python scripts/strip_text.py
+
+# In order to reduce interval tqdm updates (so that rendered output is less
+# messy), I have set a custom environment variable in readthedocs,
+# `TQDM_MININTERVAL=5`. I'd prefer to set the environment variable in this file,
+# but cannot figure out how to do so. see https://github.com/tqdm/tqdm/pull/1491
+# for details on the tqdm env variable and
+# https://docs.readthedocs.io/en/stable/environment-variables.html for
+# readthedocs env variables
 
 mkdocs:
   configuration: mkdocs.yml

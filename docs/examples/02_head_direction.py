@@ -16,6 +16,8 @@ import numpy as np
 import pynapple as nap
 import requests
 import tqdm
+import sys
+sys.path.append('..')
 import utils
 
 jax.config.update("jax_enable_x64", True)
@@ -121,7 +123,7 @@ count = nap.TsdFrame(
 
 
 # %%
-# ## NEMOS
+# ## NEMOS {.strip-code}
 # It's time to use nemos. Our goal is to estimate the pairwise interaction between neurons.
 # This can be quantified with a GLM if we use the recent population spike history to predict the next time step.
 # ### Spike History of a Neuron
