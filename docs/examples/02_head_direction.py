@@ -22,7 +22,7 @@ jax.config.update("jax_enable_x64", True)
 
 # %%
 # ## DATA STREAMING
-# 
+#
 # Here we load the data from OSF. The data is a NWB file.
 # blblalba say more
 # Just run this cell
@@ -30,10 +30,14 @@ jax.config.update("jax_enable_x64", True)
 path = os.path.join(os.getcwd(), "Mouse32-140822.nwb")
 if os.path.basename(path) not in os.listdir(os.getcwd()):
     r = requests.get(f"https://osf.io/jb2gd/download", stream=True)
-    block_size = 1024*1024
-    with open(path, 'wb') as f:
-        for data in tqdm.tqdm(r.iter_content(block_size), unit='MB', unit_scale=True,
-            total=math.ceil(int(r.headers.get('content-length', 0))//block_size)):
+    block_size = 1024 * 1024
+    with open(path, "wb") as f:
+        for data in tqdm.tqdm(
+            r.iter_content(block_size),
+            unit="MB",
+            unit_scale=True,
+            total=math.ceil(int(r.headers.get("content-length", 0)) // block_size),
+        ):
             f.write(data)
 
 # %%
@@ -44,51 +48,55 @@ if os.path.basename(path) not in os.listdir(os.getcwd()):
 data = nap.load_file(path)
 
 spikes = data["units"]  # Get spike timings
-epochs = data["epochs"]  # Get the behavioural epochs (in this case, sleep and wakefulness)
+epochs = data[
+    "epochs"
+]  # Get the behavioural epochs (in this case, sleep and wakefulness)
 angle = data["ry"]  # Get the tracked orientation of the animal
 wake_ep = data["epochs"]["wake"]
 
 # %%
 # This cell will restrict the data to what we care about i.e. the activity of head-direction neurons during wakefulness.
 
-spikes = spikes.getby_category("location")["adn"].getby_threshold("rate", 1.0)  # Select only those units that are in ADn
+# Select only those units that are in ADn
+spikes = spikes.getby_category("location")["adn"].getby_threshold("rate", 1.0)
 
 # First let's check that they are head-direction neurons.
 tuning_curves = nap.compute_1d_tuning_curves(
-    group=spikes,
-    feature=angle,
-    nb_bins=61,
-    minmax=(0, 2 * np.pi)
-    )
+    group=spikes, feature=angle, nb_bins=61, minmax=(0, 2 * np.pi)
+)
 
 print(tuning_curves)
 
 # %%
-# Each row indicates an angular bin (in radians), and each column corresponds to a single unit. 
+# Each row indicates an angular bin (in radians), and each column corresponds to a single unit.
 
 # %%
 # Let's plot the tuning curve of the first two neurons.
 
-fig, ax = plt.subplots(1, 2, figsize=(12,4))
-ax[0].plot(tuning_curves.iloc[:,0])
+fig, ax = plt.subplots(1, 2, figsize=(12, 4))
+ax[0].plot(tuning_curves.iloc[:, 0])
 ax[0].set_xlabel("Angle (rad)")
 ax[0].set_ylabel("Firing rate (Hz)")
-ax[1].plot(tuning_curves.iloc[:,1])
+ax[1].plot(tuning_curves.iloc[:, 1])
 ax[1].set_xlabel("Angle (rad)")
 plt.tight_layout()
 
-# %% 
+# %%
 # Before using Nemos, let's explore the data at the population level.
 
 # Let's plot the preferred heading
-fig = utils.plotting.plot_head_direction_tuning(tuning_curves, spikes, angle, threshold_hz=1, start=8910, end=8960)
+fig = utils.plotting.plot_head_direction_tuning(
+    tuning_curves, spikes, angle, threshold_hz=1, start=8910, end=8960
+)
 
 # %%
-# As we can see, the population activity tracks very well the current head-direction of the animal. 
+# As we can see, the population activity tracks very well the current head-direction of the animal.
 # **Question : can we predict the spiking activity of each neuron based only on the activity of other neurons?**
 
 # To fit the GLM faster, we will use only the first 10 min of wake
-wake_ep = nap.IntervalSet(start=wake_ep.loc[0, 'start'], end=wake_ep.loc[0, 'start']+3*60)
+wake_ep = nap.IntervalSet(
+    start=wake_ep.loc[0, "start"], end=wake_ep.loc[0, "start"] + 3 * 60
+)
 # Filter the spikes with at least 1hz Rate
 spikes = spikes.restrict(wake_ep).getby_threshold("rate", 1.0)
 angle = angle.restrict(wake_ep)
@@ -105,7 +113,10 @@ count = spikes.count(bin_size, ep=wake_ep)
 
 # %%
 # Here we are going to rearrange neurons order based on their prefered directions.
-count = nap.TsdFrame(t=count.t, d=count.values[:, pref_ang.reset_index(drop=True).sort_values().index.values])
+count = nap.TsdFrame(
+    t=count.t,
+    d=count.values[:, pref_ang.reset_index(drop=True).sort_values().index.values],
+)
 
 
 # %%
@@ -121,9 +132,13 @@ count = nap.TsdFrame(t=count.t, d=count.values[:, pref_ang.reset_index(drop=True
 # select a neuron's spike count time series
 neuron_count = count.loc[[0]]
 
-interval = nap.IntervalSet(start=count.time_support["start"][0], end=count.time_support["start"][0] + 1.2)
+interval = nap.IntervalSet(
+    start=count.time_support["start"][0], end=count.time_support["start"][0] + 1.2
+)
 plt.figure(figsize=(8, 3.5))
-plt.step(neuron_count.restrict(interval).t, neuron_count.restrict(interval).d, where="post")
+plt.step(
+    neuron_count.restrict(interval).t, neuron_count.restrict(interval).d, where="post"
+)
 plt.title("Spike Count Time Series")
 plt.xlabel("Time (sec)")
 plt.ylabel("Counts")
@@ -140,21 +155,35 @@ history_window = 0.8
 
 # define the count history window used for prediction
 history_interval = nap.IntervalSet(
-    start=interval["start"][0],
-    end=history_window + interval["start"][0] - 0.001
+    start=interval["start"][0], end=history_window + interval["start"][0] - 0.001
 )
 
 # define the observed counts bin (the bin right after the history window)
 observed_count_interval = nap.IntervalSet(
-    start=history_interval["end"],
-    end=history_interval["end"] + bin_size
+    start=history_interval["end"], end=history_interval["end"] + bin_size
 )
 
-fig, ax = plt.subplots(1,1, figsize=(8, 3.5))
-plt.step(neuron_count.restrict(interval).t, neuron_count.restrict(interval).d, where="post")
+fig, ax = plt.subplots(1, 1, figsize=(8, 3.5))
+plt.step(
+    neuron_count.restrict(interval).t, neuron_count.restrict(interval).d, where="post"
+)
 ylim = plt.ylim()
-plt.axvspan(history_interval["start"][0], history_interval["end"][0], *ylim, alpha=0.4, color="orange", label="input")
-plt.axvspan(observed_count_interval["start"][0], observed_count_interval["end"][0], *ylim, alpha=0.4, color="tomato", label="predicted")
+plt.axvspan(
+    history_interval["start"][0],
+    history_interval["end"][0],
+    *ylim,
+    alpha=0.4,
+    color="orange",
+    label="input",
+)
+plt.axvspan(
+    observed_count_interval["start"][0],
+    observed_count_interval["end"][0],
+    *ylim,
+    alpha=0.4,
+    color="tomato",
+    label="predicted",
+)
 plt.ylim(ylim)
 plt.title("Spike Count Time Series")
 plt.xlabel("Time (sec)")
@@ -170,19 +199,20 @@ plt.tight_layout()
 n_shift = 16
 plot_every = 2
 plt.close("all")
-utils.plotting.plot_count_history_window(
+
+obj = utils.plotting.PlotSlidingWindow(
     neuron_count,
-    n_shift,
+    25,
     history_window,
     bin_size,
-    interval.start[0],
-    ylim,
-    plot_every
+    float(interval.start),
+    (0, 3),
+    1,
+    (8, 8),
+    200,
+    add_before=0,
+    add_after=0.8,
 )
-obj = utils.plotting.PlotSlidingWindow(
-    neuron_count,25,history_window,bin_size,
-    float(interval.start), (0,3),1,(8, 8),200,
-    add_before=0, add_after=0.8)
 anim = obj.run()
 plt.show()
 # %%
@@ -196,12 +226,12 @@ window_size = int(history_window * neuron_count.rate)
 # one feature for each time point in the window.
 
 input_feature = nmo.utils.convolve_1d_trials(
-    np.eye(window_size),
-    np.expand_dims(neuron_count.d, (0, 2))
+    np.eye(window_size), np.expand_dims(neuron_count.d, (0, 2))
 )[0]
-# convert to numpy array (nemos returns jax arrays) and remove the last sample
+# convert to numpy array (nemos returns jax arrays), squeeze the neuron dimension to obtain
+# a predictor of shape (num_sample_pts, num_features), and remove the last sample
 # because there is nothing left to predict, there are no future counts.
-input_feature = np.asarray(input_feature[:-1])
+input_feature = np.squeeze(np.asarray(input_feature[:-1]))
 
 # %%
 # !!! info
@@ -214,30 +244,27 @@ input_feature = np.asarray(input_feature[:-1])
 
 suptitle = "Input feature: Count History"
 neuron_id = 0
-utils.plotting.plot_features(input_feature, neuron_id, count.rate, n_shift, suptitle)
+utils.plotting.plot_features(input_feature, count.rate, n_shift, suptitle)
 
 # %%
 # As you may see, the time axis is backward, this happens because convolution flips the time axis.
 # This is equivalent, as we can interpret the result as how much a spike will affect the future rate.
-
-
-# %%
 # In the previous tutorial our feature was 1-dimensional (just the current), now
 # instead the feature dimension is 100, because our bin size was 0.01 sec and the window size is 1 sec.
 # We can learn each weight by maximum likeihood by fitting a GLM.
 
 # define the GLM object
-model = nmo.glm.GLM(regularizer=nmo.regularizer.UnRegularized("LBFGS"))
+model = utils.model.GLM(regularizer=nmo.regularizer.UnRegularized("LBFGS"))
 
 # predict ML paramametrs. Crop the first window_size (1 sec)
 # because we don't have the full count history to predict
 # these samples.
-model.fit(input_feature, np.expand_dims(neuron_count[window_size:], 1))
+model.fit(input_feature, neuron_count[window_size:])
 
 plt.figure()
 plt.title("spike history weights")
 # flip time plot how a spike affects the future rate
-plt.plot(np.arange(window_size)/count.rate, model.coef_.flatten())
+plt.plot(np.arange(window_size) / count.rate, model.coef_.flatten())
 plt.xlabel("time from spike (sec)")
 plt.ylabel("kernel")
 
@@ -291,7 +318,7 @@ time *= history_window
 # One way to do so is by minimizing the least-squares.
 
 # compute the least-squares weights
-lsq_coef, _, _, _ = np.linalg.lstsq(basis_kernels, model.coef_[neuron_id])
+lsq_coef, _, _, _ = np.linalg.lstsq(basis_kernels, model.coef_, rcond=-1)
 
 # plot the basis and the approximation
 utils.plotting.plot_weighted_sum_basis(time, model.coef_, basis_kernels, lsq_coef)
@@ -325,39 +352,30 @@ print(f"Raw count history as feature: {np.prod(input_feature.shape)}")
 print(f"Compressed count history as feature: {np.prod(compressed_features.shape)}")
 
 
-interval = nap.IntervalSet(8820.4, 8821)
-
-# offset spikes below to look clearer
-plt.figure()
-plt.plot(compressed_features.restrict(interval)[:, :3], label=[f"feature {k}" for k in range(3)])
-cnt_interval = neuron_count.restrict(interval)
-plt.vlines(cnt_interval.t[cnt_interval.d > 0], -1, 1,"k",lw=1.5, label="spikes")
-plt.xlabel("time (sec)")
-plt.legend()
-
 # %%
 # The multiplication we have just performed is equivalent to convolve the basis
 # with the counts (without creating the large spike history feature matrix).
 # This that can be performed in nemos.
 conv_spk = nmo.utils.convolve_1d_trials(basis_kernels, [neuron_count[:, None]])[0]
-conv_spk = nap.TsdTensor(t=count[window_size:].t, d=np.asarray(conv_spk[:-1]))
+conv_spk = nap.TsdFrame(t=count[window_size:].t, d=np.asarray(conv_spk[:-1, 0]))
 
-# print just the convolved and then print the error
+# print the error
+print(f"Error: {np.max(np.abs(conv_spk.d - compressed_features.d))}")
 
 # Plot the matrix multiplication again and compare with the convolution
+interval = nap.IntervalSet(8820.4, 8821)
 plt.figure()
-plt.plot(compressed_features.restrict(interval)[:, :3], label=[f"feature {k}" for k in range(3)])
-plt.plot(conv_spk.restrict(interval)[:, 0, :3], ms=3, marker="o", ls="none", color="tomato")
+plt.plot(conv_spk.restrict(interval)[:, :3], label=[f"feature {k}" for k in range(3)])
 cnt_interval = neuron_count.restrict(interval)
-plt.vlines(cnt_interval.t[cnt_interval.d>0], 1, 1,"k",lw=1.5, label="spikes")
+plt.vlines(cnt_interval.t[cnt_interval.d > 0], -1, 0, "k", lw=1.5, label="spikes")
 plt.xlabel("time (sec)")
 plt.legend()
 
 # %%
 # Now that we have our "compressed" history feature matrix, we can fit the ML parameters for a GLM.
 
-model_basis = nmo.glm.GLM(regularizer=nmo.regularizer.UnRegularized("LBFGS"))
-model_basis.fit(conv_spk, neuron_count[window_size:, None])
+model_basis = utils.model.GLM(regularizer=nmo.regularizer.UnRegularized("LBFGS"))
+model_basis.fit(conv_spk, neuron_count[window_size:])
 
 # %%
 # We can plot the resulting response, noting that the weights we just learned needs to be "expanded" back
@@ -365,16 +383,16 @@ model_basis.fit(conv_spk, neuron_count[window_size:, None])
 
 plt.figure()
 plt.title("Spike History Weights")
-plt.plot(time, model.coef_.flatten(), alpha=0.3,  label="GLM raw history")
-plt.plot(time, basis_kernels @ model_basis.coef_.flatten(), "--k", label="GLM basis")
+plt.plot(time, model.coef_, alpha=0.3, label="GLM raw history")
+plt.plot(time, basis_kernels @ model_basis.coef_, "--k", label="GLM basis")
 plt.xlabel("Time from spike (sec)")
 plt.ylabel("Weight")
 plt.legend()
 
 # compare model scores, as expected the training score is better with more parameters
 # this may could be over-fitting.
-print(f"full history score: {model.score(input_feature, neuron_count[window_size:, None])}")
-print(f"basis score: {model_basis.score(conv_spk, neuron_count[window_size:, None])}")
+print(f"full history score: {model.score(input_feature, neuron_count[window_size:])}")
+print(f"basis score: {model_basis.score(conv_spk, neuron_count[window_size:])}")
 
 # %%
 # ### All-to-all Connectivity
@@ -392,44 +410,47 @@ convolved_count = convolved_count[:-1]
 print(f"Convolved count shape: {convolved_count.shape}")
 
 # %%
-# This is all neuron to one neuron. Say that we can fit a neuron at the time and that's equivalent
-# to a joint fit. Do the fitting using a loop.
-# To build the correct feature matrix, we want the spike history of any neuron to be a
-# predictor of each individual neurons. This is called all-to-all connectivity, and can be constructed
-# by a few array manipulations.
-# First, concatenate all the predictors for each neuron `(num_time_points, num_neurons * num_basis_funcs)`,
-# this is equivalent to a predictor for a single neuron.
+# This is all neuron to one neuron. We can fit a neuron at the time, this is equivalent to fit the
+# population jointly.
+#
+# !!! note
+#     Once we condition on past activity, log-likelihood of the population is the sum of the log-likelihood
+#     of individual neurons. Maximizing the sum (i.e. the population log-likelihood) is equivalent to
+#     maximizing each individual term separately (i.e. fitting one neuron at the time).
+#
+# Nemos requires an input of shape `(num_time_points, num_features)`. To achieve that we need to concatenate
+# the convolved count history in a single feature dimension. This can be done using numpy reshape.
 
-features = convolved_count.reshape(convolved_count.shape[0], -1)
-print(f"Convolved count reshaped: {features.shape}")
+convolved_count = convolved_count.reshape(convolved_count.shape[0], -1)
+print(f"Convolved count reshaped: {convolved_count.shape}")
 
 # %%
-# Second, we need to repeat this features `num_neurons` times, so that each neuron gets the whole population
-# history as predictor. Here we additionally cut some time points out, this is to reduce the input size.
-# Not a necessary but it will result in a quicker fit.
+# Now fit the GLM for each neuron.
 
 use_tp = 15000
-# add an extra dimension (num_neurons, 1, num_features)
-features = np.expand_dims(features[:use_tp], 1)
-# repeat the feature on that dimension num_neurons times
-# to obtain (num_neurons, num_neurons, num_features)
-features = np.repeat(features, len(spikes), 1)
+models = []
+for neu in range(count.shape[1]):
+    print(f"fitting neuron {neu}...")
+    count_neu = count[:, neu]
+    model = utils.model.GLM(
+        regularizer=nmo.regularizer.Ridge(regularizer_strength=0.1, solver_name="LBFGS")
+    )
+    models.append(model.fit(convolved_count[:use_tp], count_neu[window_size:][:use_tp]))
 
-# %%
-# Now fit the GLM.
-model = nmo.glm.GLM(regularizer=nmo.regularizer.Ridge(regularizer_strength=0.1, solver_name="LBFGS"))
-model.fit(features, count.values[window_size:][:use_tp])
 
 # %%
 # Extract the weights
-weights = np.asarray(model.coef_)
-weights = weights.reshape(len(spikes), len(spikes), -1)
+
+weights = np.zeros((count.shape[1], count.shape[1], basis.n_basis_funcs))
+for receiver_neu in range(count.shape[1]):
+    weights[receiver_neu] = models[receiver_neu].coef_.reshape(
+        count.shape[1], basis.n_basis_funcs
+    )
 
 # %%
-#
 # Try to plot the glm coupling weights. What do you see?
 
-fig, axs = plt.subplots(2, 4, figsize=(12,4))
+fig, axs = plt.subplots(2, 4, figsize=(12, 4))
 for idx, weight in enumerate(np.transpose(weights, (2, 0, 1))):
     row, col = np.unravel_index(idx, axs.shape)
     axs[row, col].imshow(weight)
@@ -438,67 +459,20 @@ for idx, weight in enumerate(np.transpose(weights, (2, 0, 1))):
 
 plt.tight_layout()
 
-# predict rate (counts are already sorted by tuning prefs)
-full_features = convolved_count.reshape(convolved_count.shape[0], -1)
-full_features = np.expand_dims(full_features, 1)
-full_features = np.repeat(full_features, len(spikes), 1)
-predicted_firing_rate = nap.TsdFrame(t=count[window_size:].t, d=np.asarray(model.predict(full_features)))
-
-cmap_label = "hsv"
-start = 8910
-end = 8960
-threshold_hz=1
-figsize = (12, 6)
-plot_ep = nap.IntervalSet(start, end)
-index_keep = spikes.restrict(plot_ep).getby_threshold("rate", threshold_hz).index
-
-# filter neurons
-tuning_curves = tuning_curves.loc[:, index_keep]
-pref_ang = tuning_curves.idxmax().loc[index_keep]
-spike_tsd = spikes.restrict(plot_ep).getby_threshold("rate", threshold_hz).to_tsd(pref_ang)
-
-# plot raster and heading
-cmap = plt.get_cmap(cmap_label)
-unq_angles = np.unique(pref_ang.values)
-n_subplots = len(unq_angles)
-relative_color_levs = (unq_angles - unq_angles[0]) / (unq_angles[-1] - unq_angles[0])
-fig = plt.figure(figsize=figsize)
-# plot head direction angle
-ax = plt.subplot2grid((4, n_subplots), loc=(0, 0), rowspan=1, colspan=n_subplots, fig=fig)
-ax.plot(angle.restrict(plot_ep), color="k", lw=2)
-ax.set_ylabel("Angle (rad)")
-ax.set_title("Animal's Head Direction")
-
-ax = plt.subplot2grid((4, n_subplots), loc=(1, 0), rowspan=1, colspan=n_subplots, fig=fig)
-ax.set_title("Neural Activity")
-for i, ang in enumerate(unq_angles):
-    sel = spike_tsd.d == ang
-    ax.plot(spike_tsd[sel].t, np.ones(sel.sum()) * i, "|", color=cmap(relative_color_levs[i]), alpha=0.5)
-ax.set_ylabel("Sorted Neurons")
-ax.set_xlabel("Time (s)")
-
-
-ax = plt.subplot2grid((4, n_subplots), loc=(2, 0), rowspan=1, colspan=n_subplots, fig=fig)
-ax.set_title("Neural Firing Rate")
-
-fr = predicted_firing_rate.restrict(plot_ep).d
-fr = fr.T / np.max(fr, axis=1)
-ax.imshow(fr[::-1], cmap="Blues", aspect="auto")
-ax.set_ylabel("Sorted Neurons")
-ax.set_xlabel("Time (s)")
-
-for i, ang in enumerate(unq_angles):
-    neu_idx = np.argsort(pref_ang.values)[i]
-    ax = plt.subplot2grid((4, n_subplots), loc=(3 + i // n_subplots, i % n_subplots),
-                          rowspan=1, colspan=1, fig=fig, projection="polar")
-    ax.fill_between(tuning_curves.iloc[:, neu_idx].index, np.zeros(len(tuning_curves)),
-                    tuning_curves.iloc[:, neu_idx].values, color=cmap(relative_color_levs[i]), alpha=0.5)
-    ax.set_xticks([])
-    ax.set_yticks([])
-plt.tight_layout()
-
 # %%
-# ### Exercise
-# What would happen if we regressed explicitly the head direction?
+# Predict the rate (counts are already sorted by tuning prefs)
 
+predicted_firing_rate = np.zeros((count.shape[0] - window_size, count.shape[1]))
+for receiver_neu in range(count.shape[1]):
+    predicted_firing_rate[:, receiver_neu] = models[receiver_neu].predict(
+        convolved_count
+    )
 
+predicted_firing_rate = nap.TsdFrame(t=count[window_size:].t, d=predicted_firing_rate)
+
+utils.plotting.plot_head_direction_tuning_model(tuning_curves, predicted_firing_rate, spikes, angle, threshold_hz=1,
+                                                start=8910, end=8960, cmap_label="hsv")
+
+# # %%
+# # ### Exercise
+# # What would happen if we regressed explicitly the head direction?

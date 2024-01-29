@@ -1,67 +1,79 @@
-import jax.numpy as jnp
-import numpy as np
-from numpy.typing import ArrayLike
-import nemos as nmo
-from nemos.base_class import DESIGN_INPUT_TYPE
-from typing import Optional, Tuple, Union, Literal
+from typing import Literal, Optional, Tuple, Union
+
 import jax
+import jax.numpy as jnp
+import nemos as nmo
+import numpy as np
+from nemos.base_class import DESIGN_INPUT_TYPE
+from numpy.typing import ArrayLike
 
 
 class GLM(nmo.glm.GLM):
-
     def fit(
-            self,
-            X: DESIGN_INPUT_TYPE,
-            y: ArrayLike,
-            init_params: Optional[
+        self,
+        X: DESIGN_INPUT_TYPE,
+        y: ArrayLike,
+        init_params: Optional[
             Tuple[Union[DESIGN_INPUT_TYPE, ArrayLike], ArrayLike]
-            ] = None
+        ] = None,
     ) -> nmo.glm.GLM:
         """Fit GLM to neural activity.
 
-            Fit and store the model parameters as attributes
-            ``coef_`` and ``coef_``.
+        Fit and store the model parameters as attributes
+        ``coef_`` and ``coef_``.
 
-            Parameters
-            ----------
-            X :
-                Predictors, array of shape (n_time_bins, n_features) or pytree of same.
-            y :
-                Target neural activity arranged in a matrix, shape (n_time_bins, ).
-            init_params :
-                2-tuple of initial parameter values: (coefficients, intercepts). If
-                None, we initialize coefficients with zeros, intercepts with the
-                log of the mean neural activity. coefficients is an array of shape
-                (n_features, ) or pytree of same, intercepts is an array
-                of shape (1,)
+        Parameters
+        ----------
+        X :
+            Predictors, array of shape (n_time_bins, n_features) or pytree of same.
+        y :
+            Target neural activity arranged in a matrix, shape (n_time_bins, ).
+        init_params :
+            2-tuple of initial parameter values: (coefficients, intercepts). If
+            None, we initialize coefficients with zeros, intercepts with the
+            log of the mean neural activity. coefficients is an array of shape
+            (n_features, ) or pytree of same, intercepts is an array
+            of shape (1,)
 
-            Raises
-            ------
-            ValueError
-                - If `init_params` is not of length two.
-                - If dimensionality of `init_params` are not correct.
-                - If `X` is not two-dimensional.
-                - If `y` is not one-dimensional.
-                - If solver returns at least one NaN parameter, which means it found
-                  an invalid solution. Try tuning optimization hyperparameters.
-            TypeError
-                - If `init_params` are not array-like
-                - If `init_params[i]` cannot be converted to jnp.ndarray for all i
+        Raises
+        ------
+        ValueError
+            - If `init_params` is not of length two.
+            - If dimensionality of `init_params` are not correct.
+            - If `X` is not two-dimensional.
+            - If `y` is not one-dimensional.
+            - If solver returns at least one NaN parameter, which means it found
+              an invalid solution. Try tuning optimization hyperparameters.
+        TypeError
+            - If `init_params` are not array-like
+            - If `init_params[i]` cannot be converted to jnp.ndarray for all i
 
-            """
+        """
         if init_params is not None:
             if len(init_params) != 2:
                 raise ValueError("Params must have length two.")
-            init_params = (jax.tree_map(lambda x: np.expand_dims(x, axis=0), init_params[0]), init_params[1])
-        super().fit(jnp.expand_dims(X, axis=1), jnp.expand_dims(y, axis=1), init_params=init_params)
+            init_params = (
+                jax.tree_map(lambda x: np.expand_dims(x, axis=0), init_params[0]),
+                init_params[1],
+            )
+        X = jax.tree_map(
+            lambda x: jax.numpy.expand_dims(jax.numpy.asarray(x), axis=1), X
+        )
+        y = jax.tree_map(
+            lambda x: jax.numpy.expand_dims(jax.numpy.asarray(x), axis=1), y
+        )
+        super().fit(X, y, init_params=init_params)
         self.coef_ = jax.tree_map(np.squeeze, self.coef_)
         return self
 
     def predict(self, X: DESIGN_INPUT_TYPE) -> jnp.ndarray:
+        X = jax.tree_map(
+            lambda x: jax.numpy.expand_dims(jax.numpy.asarray(x), axis=1), X
+        )
         self.coef_ = jax.tree_map(lambda x: np.expand_dims(x, axis=0), self.coef_)
-        rate = super().predict(jnp.expand_dims(X, axis=1))
+        rate = super().predict(X)
         self.coef_ = jax.tree_map(np.squeeze, self.coef_)
-        return rate
+        return jax.numpy.squeeze(rate)
 
     def score(
         self,
@@ -71,21 +83,25 @@ class GLM(nmo.glm.GLM):
             "log-likelihood", "pseudo-r2-McFadden", "pseudo-r2-Cohen"
         ] = "pseudo-r2-McFadden",
     ) -> jnp.ndarray:
+        X = jax.tree_map(
+            lambda x: jax.numpy.expand_dims(jax.numpy.asarray(x), axis=1), X
+        )
+        y = jax.tree_map(
+            lambda x: jax.numpy.expand_dims(jax.numpy.asarray(x), axis=1), y
+        )
         self.coef_ = jax.tree_map(lambda x: np.expand_dims(x, axis=0), self.coef_)
-        score = super().score(jnp.expand_dims(X, axis=1), jnp.expand_dims(y, axis=1), score_type=score_type)
+        score = super().score(X, y, score_type=score_type)
         self.coef_ = jax.tree_map(np.squeeze, self.coef_)
         return score
 
     @staticmethod
     def _check_input_dimensionality(
-            X: Optional[DESIGN_INPUT_TYPE] = None,
-            y: Optional[jnp.ndarray] = None,
+        X: Optional[DESIGN_INPUT_TYPE] = None,
+        y: Optional[jnp.ndarray] = None,
     ):
         if not (y is None):
             if y.ndim != 2:
-                raise ValueError(
-                    "y must be one-dimensional, with shape (n_timebins, )"
-                )
+                raise ValueError("y must be one-dimensional, with shape (n_timebins, )")
         if not (X is None):
             if nmo.utils.pytree_map_and_reduce(lambda x: x.ndim != 3, any, X):
                 raise ValueError(
@@ -94,9 +110,9 @@ class GLM(nmo.glm.GLM):
 
     @staticmethod
     def _check_input_and_params_consistency(
-            params: Tuple[DESIGN_INPUT_TYPE, jnp.ndarray],
-            X: Optional[DESIGN_INPUT_TYPE] = None,
-            y: Optional[jnp.ndarray] = None,
+        params: Tuple[DESIGN_INPUT_TYPE, jnp.ndarray],
+        X: Optional[DESIGN_INPUT_TYPE] = None,
+        y: Optional[jnp.ndarray] = None,
     ):
         """Validate the number of neurons in model parameters and input arguments.
 
@@ -119,7 +135,7 @@ class GLM(nmo.glm.GLM):
                     f"params[0] is {type(params[0])}"
                 )
             if nmo.utils.pytree_map_and_reduce(
-                    lambda p, x: p.shape[1] != x.shape[2], any, params[0], X
+                lambda p, x: p.shape[1] != x.shape[2], any, params[0], X
             ):
                 raise ValueError(
                     "Inconsistent number of features. "
@@ -129,8 +145,8 @@ class GLM(nmo.glm.GLM):
 
     @staticmethod
     def _check_and_convert_params(
-            params: Tuple[Union[DESIGN_INPUT_TYPE, ArrayLike], ArrayLike],
-            data_type: Optional[jnp.dtype] = None,
+        params: Tuple[Union[DESIGN_INPUT_TYPE, ArrayLike], ArrayLike],
+        data_type: Optional[jnp.dtype] = None,
     ) -> Tuple[DESIGN_INPUT_TYPE, jnp.ndarray]:
         """
         Validate the dimensions and consistency of parameters and data.
@@ -164,7 +180,7 @@ class GLM(nmo.glm.GLM):
             )
 
         if params[1].shape[0] != 1:
-            raise ValueError(f"Exactly one intercept term must be provided. {params[1].shape[0]} intercepts provided instead!")
+            raise ValueError(
+                f"Exactly one intercept term must be provided. {params[1].shape[0]} intercepts provided instead!"
+            )
         return params
-
-
