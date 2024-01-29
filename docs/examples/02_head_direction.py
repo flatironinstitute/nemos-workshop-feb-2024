@@ -9,6 +9,7 @@ C'est la vie
 import math
 import os
 
+from IPython.display import HTML
 import jax
 import matplotlib.pyplot as plt
 import nemos as nmo
@@ -217,7 +218,7 @@ obj = utils.plotting.PlotSlidingWindow(
     add_after=0.8,
 )
 anim = obj.run()
-plt.show()
+HTML(anim.to_html5_video())
 # %%
 # We can construct a predictor feature matrix by vertically stacking the "orange" chunks of spike history.
 # A fast way to do so is by convolving the counts with an identity matrix.
