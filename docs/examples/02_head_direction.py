@@ -38,8 +38,7 @@ plt.style.use('../utils/nemos.mplstyle')
 # blblalba say more
 # Just run this cell
 
-path = os.path.join(os.getcwd(), "Mouse32-140822.nwb")
-utils.data.download_data(path, "https://osf.io/xesdm/download")
+path = utils.data.download_data("Mouse32-140822.nwb", "https://osf.io/jb2gd/download")
 
 # %%
 # ## Pynapple

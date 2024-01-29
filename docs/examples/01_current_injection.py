@@ -34,6 +34,14 @@ we'll use throughout this workshop, as it simplifies handling this type of
 data. After we've explored the data some, we'll introduce the Generalized
 Linear Model and how to fit it with nemos.
 
+## Learning objectives {.keep-text}
+
+- Learn how to explore spiking data and do basic analyses using pynapple
+- Learn how to structure data for nemos
+- Learn how to fit a basic Generalized Linear Model using nemos
+- Learn how to retrieve the parameters and predictions from a fit GLM for
+  intrepetation.
+
 """
 
 # Import everything
@@ -79,8 +87,7 @@ jax.config.update("jax_enable_x64", True)
 # On subsequent runs, the cell gets skipped: we do not need to redownload the
 # data.
 
-path = os.path.join(os.getcwd(), "allen_478498617.nwb")
-utils.data.download_data(path, "https://osf.io/vf2nj/download")
+path = utils.data.download_data("allen_478498617.nwb", "https://osf.io/vf2nj/download")
 
 # %%
 # ## Pynapple
@@ -586,7 +593,7 @@ utils.plotting.current_injection_plot(current, spikes, firing_rate,
 #   the second -- Failure!
 #
 # - Our predicted firing rate has the periodicity we see in the smoothed spike
-# - train -- Success!
+#   train -- Success!
 #
 # - The predicted firing rate does not decay as the input remains on: the
 #   amplitudes are identical for each of the bumps within a given interval --
