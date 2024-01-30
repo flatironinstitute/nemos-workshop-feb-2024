@@ -86,6 +86,9 @@ jax.config.update("jax_enable_x64", True)
 # to download the data, and a progress bar will show the download's progress.
 # On subsequent runs, the cell gets skipped: we do not need to redownload the
 # data.
+# <div class="notes">
+# - Stream the data. Format is [Neurodata Without Borders (NWB) standard](https://nwb-overview.readthedocs.io/en/latest/)
+# </div>
 
 path = utils.data.download_data("allen_478498617.nwb", "https://osf.io/vf2nj/download")
 
@@ -98,7 +101,7 @@ path = utils.data.download_data("allen_478498617.nwb", "https://osf.io/vf2nj/dow
 # its contents.
 #
 # <div class="notes">
-# - load in data
+# - Open the NWB file with [pynapple](https://pynapple-org.github.io/pynapple/)
 # </div>
 
 
@@ -122,6 +125,15 @@ print(data)
 #   We will not use this info in this example
 #
 # Now let's go through the relevant variables in some more detail:
+# <div class="notes">"
+# - `units`: dictionary of neurons, holding each neuron's spike timestamps.
+# - `epochs`: start and end times of different intervals, defining the
+#   experimental structure, specifying when each stimulation protocol began and
+#   ended.
+# - `stimulus`: injected current, in Amperes, sampled at 20k Hz.
+# - `response`: the neuron's intracellular voltage, sampled at 20k Hz.
+# </div>
+
 
 trial_interval_set = data["epochs"]
 # convert current from Ampere to pico-amperes, to match the above visualization
@@ -131,6 +143,11 @@ spikes = data["units"]
 
 # %% 
 # First, let's examine `trial_interval_set`:
+# <div class="notes">"
+# - `trial_interval_set`: dictionnary of start and end times of different intervals, defining the
+#   experimental structure, specifying when each stimulation protocol began and
+#   ended.
+# </div>
 
 trial_interval_set.keys()
 
@@ -140,6 +157,10 @@ trial_interval_set.keys()
 # [`IntervalSets`](https://pynapple-org.github.io/pynapple/reference/core/interval_set/)
 # for values. Each key defines the stimulus protocol, with the value defining
 # the begining and end of that stimulation protocol.
+#
+# <div class="notes">"
+# - `Noise 1`: epochs of random noise
+# </div>
 
 noise_interval = trial_interval_set["Noise 1"]
 noise_interval
@@ -152,6 +173,10 @@ noise_interval
 # gray).
 #
 # To select only one epoch from an IntervalSet, use 2 square brackets:
+#
+# <div class="notes">"
+# - Let's focus on the first epoch.
+# </div>
 
 noise_interval = noise_interval.loc[[0]]
 noise_interval
@@ -159,6 +184,11 @@ noise_interval
 # %%
 #
 # Now let's examine `current`:
+#
+# <div class="notes">"
+# - `current` : Tsd (TimeSeriesData) : time index + data
+# </div>
+
 
 current
 
@@ -174,6 +204,12 @@ current
 # discussed above, we only want one of the "Noise 1" sweeps. Fortunately,
 # `pynapple` makes it easy to grab out the relevant time points by making use
 # of the `noise_interval` we defined above:
+#
+# <div class="notes">"
+# - `restrict` : restricts a time series object to a set of time intervals delimited by an IntervalSet object
+# </div>
+
+
 current = current.restrict(noise_interval)
 current
 
@@ -185,6 +221,11 @@ current
 # [`TsGroup`](https://pynapple-org.github.io/pynapple/reference/core/ts_group/),
 # a dictionary-like object that holds multiple `Ts` (timeseries) objects with
 # potentially different time indices:
+#
+# <div class="notes">"
+# - `TsGroup` : a custom dictionnary holding multiple `Ts` (timeseries) objects with
+# potentially different time indices.
+# </div>
 
 spikes
 
