@@ -93,7 +93,7 @@ fig = utils.plotting.plot_head_direction_tuning(
 # As we can see, the population activity tracks very well the current head-direction of the animal.
 # **Question : can we predict the spiking activity of each neuron based only on the activity of other neurons?**
 
-# To fit the GLM faster, we will use only the first 10 min of wake
+# To fit the GLM faster, we will use only the first 3 min of wake
 wake_ep = nap.IntervalSet(
     start=wake_ep.loc[0, "start"], end=wake_ep.loc[0, "start"] + 3 * 60
 )
@@ -117,7 +117,7 @@ count = nap.TsdFrame(
     t=count.t,
     d=count.values[:, pref_ang.reset_index(drop=True).sort_values().index.values],
 )
-
+sorted_index = spikes.index[pref_ang.reset_index(drop=True).sort_values().index.values]
 
 # %%
 # ## Nemos {.strip-code}
@@ -131,6 +131,7 @@ count = nap.TsdFrame(
 
 # select a neuron's spike count time series
 neuron_count = count.loc[[0]]
+
 
 interval = nap.IntervalSet(
     start=count.time_support["start"][0], end=count.time_support["start"][0] + 1.2
@@ -195,10 +196,9 @@ plt.legend()
 plt.tight_layout()
 
 # %%
-# For each time point we shift our window one bin at the time.
+# For each time point we shift our window one bin at the time and vertically stack the spike count history in a matrix.
 n_shift = 16
 plot_every = 2
-plt.close("all")
 
 obj = utils.plotting.PlotSlidingWindow(
     neuron_count,
@@ -216,8 +216,7 @@ obj = utils.plotting.PlotSlidingWindow(
 anim = obj.run()
 HTML(anim.to_html5_video())
 # %%
-# We can construct a predictor feature matrix by vertically stacking the "orange" chunks of spike history.
-# A fast way to do so is by convolving the counts with an identity matrix.
+# A fast way to perform this operation is by convolving the counts with the identity matrix.
 
 # convert the prediction window to bins (by multiplying with the sampling rate)
 window_size = int(history_window * neuron_count.rate)
@@ -365,7 +364,7 @@ conv_spk = nap.TsdFrame(t=count[window_size:].t, d=np.asarray(conv_spk[:-1, 0]))
 # print the error
 print(f"Error: {np.max(np.abs(conv_spk.d - compressed_features.d))}")
 
-# Plot the matrix multiplication again and compare with the convolution
+# Visualize the convolution results
 interval = nap.IntervalSet(8820.4, 8821)
 plt.figure()
 plt.plot(conv_spk.restrict(interval)[:, :3], label=[f"feature {k}" for k in range(3)])
@@ -402,6 +401,19 @@ print(f"basis train score: {model_basis.score(conv_spk[:train_num_samp], neuron_
 print(f"\nfull history test score: {model.score(input_feature[train_num_samp:], neuron_count[window_size:][train_num_samp:], score_type='pseudo-r2-Cohen')}")
 print(f"basis test score: {model_basis.score(conv_spk[train_num_samp:], neuron_count[window_size:][train_num_samp:], score_type='pseudo-r2-Cohen')}")
 
+# By comparing the model prediciton we can
+rate_basis = nap.Tsd(t=conv_spk.t[train_num_samp:], d=np.asarray(model_basis.predict(conv_spk[train_num_samp:])))
+rate_history = nap.Tsd(t=conv_spk.t[train_num_samp:], d=np.asarray(model.predict(input_feature[train_num_samp:])))
+ep = nap.IntervalSet(start=8962, end=8966)
+
+plt.figure()
+plt.plot(rate_history.restrict(ep), label="count history")
+plt.plot(rate_basis.restrict(ep), label="basis")
+
+idx_spikes = np.where(neuron_count.restrict(ep).d > 0)[0]
+plt.vlines(neuron_count.restrict(ep).t[idx_spikes],  -0.5, 0, color="k")
+plt.plot(neuron_count.smooth(5, 80).restrict(ep),color="k", label="smoothed spikes")
+plt.legend()
 
 # %%
 # ### All-to-all Connectivity
