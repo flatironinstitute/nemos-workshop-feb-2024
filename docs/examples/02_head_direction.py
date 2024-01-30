@@ -3,56 +3,55 @@
 """
 # Fit Head-direction population
 
-C'est la vie
+## Learning objectives {.keep-text}
+
+- Learn how to add history-related predictors to nemos GLM
+- Learn about nemos `Basis` objects
+- Learn how to use `Basis` objects with convolution
+
 """
 
 import math
 import os
 
+from IPython.display import HTML
 import jax
 import matplotlib.pyplot as plt
 import nemos as nmo
 import numpy as np
 import pynapple as nap
 import requests
-import tqdm
+import sys
+sys.path.append('..')
 import utils
 
+# Set the default precision to float64, which is generally a good idea for
+# optimization purposes.
 jax.config.update("jax_enable_x64", True)
-plt.style.use('./utils/nemos.mplstyle')
+# configure plots some
+plt.style.use('../utils/nemos.mplstyle')
 
 # %%
-# ## DATA STREAMING
+# ## Data Streaming
 #
 # Here we load the data from OSF. The data is a NWB file.
 # blblalba say more
 # Just run this cell
 
-path = os.path.join(os.getcwd(), "Mouse32-140822.nwb")
-if os.path.basename(path) not in os.listdir(os.getcwd()):
-    r = requests.get(f"https://osf.io/jb2gd/download", stream=True)
-    block_size = 1024 * 1024
-    with open(path, "wb") as f:
-        for data in tqdm.tqdm(
-            r.iter_content(block_size),
-            unit="MB",
-            unit_scale=True,
-            total=math.ceil(int(r.headers.get("content-length", 0)) // block_size),
-        ):
-            f.write(data)
+path = utils.data.download_data("Mouse32-140822.nwb", "https://osf.io/jb2gd/download")
 
 # %%
-# ## PYNAPPLE
+# ## Pynapple
 # We are going to open the NWB file with pynapple
 # Since pynapple has been covered in tutorial 0, we are going faster here.
 
 data = nap.load_file(path)
-
-spikes = data["units"]  # Get spike timings
-epochs = data[
-    "epochs"
-]  # Get the behavioural epochs (in this case, sleep and wakefulness)
-angle = data["ry"]  # Get the tracked orientation of the animal
+# Get spike timings
+spikes = data["units"]
+# Get the behavioural epochs (in this case, sleep and wakefulness)
+epochs = data["epochs"]
+# Get the tracked orientation of the animal
+angle = data["ry"]
 wake_ep = data["epochs"]["wake"]
 
 # %%
@@ -121,7 +120,7 @@ count = nap.TsdFrame(
 
 
 # %%
-# ## NEMOS
+# ## Nemos {.strip-code}
 # It's time to use nemos. Our goal is to estimate the pairwise interaction between neurons.
 # This can be quantified with a GLM if we use the recent population spike history to predict the next time step.
 # ### Spike History of a Neuron
@@ -215,7 +214,7 @@ obj = utils.plotting.PlotSlidingWindow(
     add_after=0.8,
 )
 anim = obj.run()
-plt.show()
+HTML(anim.to_html5_video())
 # %%
 # We can construct a predictor feature matrix by vertically stacking the "orange" chunks of spike history.
 # A fast way to do so is by convolving the counts with an identity matrix.
@@ -484,6 +483,6 @@ predicted_firing_rate = nap.TsdFrame(t=count[window_size:].t, d=predicted_firing
 utils.plotting.plot_head_direction_tuning_model(tuning_curves, predicted_firing_rate, spikes, angle, threshold_hz=1,
                                                 start=8910, end=8960, cmap_label="hsv")
 
-# # %%
-# # ### Exercise
-# # What would happen if we regressed explicitly the head direction?
+# %%
+# ## Exercise
+# What would happen if we regressed explicitly the head direction?
