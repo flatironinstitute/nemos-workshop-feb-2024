@@ -9,14 +9,15 @@
 import jax
 import math
 import os
-
-
 import matplotlib.pyplot as plt
 import nemos as nmo
 import numpy as np
 import pynapple as nap
 import requests
 import tqdm
+import sys
+sys.path.append('..')
+import utils
 
 # required for second order methods (BFGS, Newton-CG)
 jax.config.update("jax_enable_x64", True)
