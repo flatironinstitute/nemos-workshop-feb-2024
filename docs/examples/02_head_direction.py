@@ -117,7 +117,6 @@ count = nap.TsdFrame(
     t=count.t,
     d=count.values[:, pref_ang.reset_index(drop=True).sort_values().index.values],
 )
-sorted_index = spikes.index[pref_ang.reset_index(drop=True).sort_values().index.values]
 
 # %%
 # ## Nemos {.strip-code}
