@@ -57,7 +57,11 @@ wake_ep = data["epochs"]["wake"]
 # %%
 # This cell will restrict the data to what we care about i.e. the activity of head-direction neurons during wakefulness.
 
+spikes
+
+# %%
 # Select only those units that are in ADn
+
 spikes = spikes.getby_category("location")["adn"].getby_threshold("rate", 1.0)
 
 # First let's check that they are head-direction neurons.
@@ -65,7 +69,6 @@ tuning_curves = nap.compute_1d_tuning_curves(
     group=spikes, feature=angle, nb_bins=61, minmax=(0, 2 * np.pi)
 )
 
-print(tuning_curves)
 
 # %%
 # Each row indicates an angular bin (in radians), and each column corresponds to a single unit.
@@ -226,10 +229,10 @@ window_size = int(history_window * neuron_count.rate)
 input_feature = nmo.utils.convolve_1d_trials(
     np.eye(window_size), np.expand_dims(neuron_count.d, (0, 2))
 )[0]
-# convert to numpy array (nemos returns jax arrays), squeeze the neuron dimension to obtain
-# a predictor of shape (num_sample_pts, num_features), and remove the last sample
+# convert to numpy array (nemos returns jax arrays),
+# a predictor of shape (num_sample_pts, num_features), remove the last sample
 # because there is nothing left to predict, there are no future counts.
-input_feature = np.squeeze(np.asarray(input_feature[:-1]))
+input_feature = np.asarray(input_feature[:-1])
 
 # %%
 # !!! info
@@ -265,7 +268,7 @@ model.fit(input_feature[:train_num_samp], neuron_count[window_size:][:train_num_
 plt.figure()
 plt.title("spike history weights")
 # flip time plot how a spike affects the future rate
-plt.plot(np.arange(window_size) / count.rate, model.coef_.flatten())
+plt.plot(np.arange(window_size) / count.rate, model.coef_)
 plt.xlabel("time from spike (sec)")
 plt.ylabel("kernel")
 
@@ -287,7 +290,9 @@ plt.ylabel("kernel")
 # distance from event, which is a makes sense for many history-related inputs
 # in neuroscience: whether an input happened 1 or 5 msec ago matters a lot,
 # whereas whether an input happened 51 or 55 msec ago is less important.
-#
+
+# plot basis only here with helper func
+
 # !!! info
 #
 #     We provide a handful of different choices for basis functions, and
@@ -342,39 +347,36 @@ utils.plotting.plot_weighted_sum_basis(time, model.coef_, basis_kernels, lsq_coe
 # we will reduce over-fitting, which is the tendency of statistical models like
 # GLMs to capture noise as if it was signal, when the predictors are high dimensional.
 #
-# Let's see our basis in action. We can "compress" spike history feature by multiplying it
-# with the basis.
-
-compressed_features = np.squeeze(input_feature) @ basis_kernels
-compressed_features = nap.TsdFrame(t=count[window_size:].t, d=compressed_features)
-
-# compare dimensionality of features
-print(f"Raw count history as feature: {np.prod(input_feature.shape)}")
-print(f"Compressed count history as feature: {np.prod(compressed_features.shape)}")
-
-
-# %%
-# The multiplication we have just performed is equivalent to convolve the basis
+# Let's see our basis in action. We can "compress" spike history feature by convolving the basis
 # with the counts (without creating the large spike history feature matrix).
 # This that can be performed in nemos.
+# use expand dims instead
+# finish pr for convolve with pytree
+
 conv_spk = nmo.utils.convolve_1d_trials(basis_kernels, [neuron_count[:, None]])[0]
 conv_spk = nap.TsdFrame(t=count[window_size:].t, d=np.asarray(conv_spk[:-1, 0]))
 
-# print the error
-print(f"Error: {np.max(np.abs(conv_spk.d - compressed_features.d))}")
+print(f"Raw count history as feature: {input_feature.shape}")
+print(f"Compressed count history as feature: {conv_spk.shape}")
+
+
+# %%xf
 
 # Visualize the convolution results
-interval = nap.IntervalSet(8820.4, 8821)
+interval = nap.IntervalSet(8917.5, 8918.5)
 plt.figure()
-plt.plot(conv_spk.restrict(interval)[:, :3], label=[f"feature {k}" for k in range(3)])
+plt.plot(conv_spk.restrict(interval))#, label=[f"feature {k}" for k in range(3)])
 cnt_interval = neuron_count.restrict(interval)
-plt.vlines(cnt_interval.t[cnt_interval.d > 0], -1, 0, "k", lw=1.5, label="spikes")
+plt.vlines(cnt_interval.t[cnt_interval.d > 0], -1, 0, "k", lw=2, label="spikes")
 plt.xlabel("time (sec)")
 plt.legend()
+
+# find interval with two spikes to show the accumulation, in a second row
 
 # %%
 # Now that we have our "compressed" history feature matrix, we can fit the ML parameters for a GLM.
 
+# use restrict on interval set training
 model_basis = utils.model.GLM(regularizer=nmo.regularizer.UnRegularized("LBFGS"))
 model_basis.fit(conv_spk[:train_num_samp], neuron_count[window_size:][:train_num_samp])
 
@@ -386,9 +388,12 @@ plt.figure()
 plt.title("Spike History Weights")
 plt.plot(time, model.coef_, alpha=0.3, label="GLM raw history")
 plt.plot(time, basis_kernels @ model_basis.coef_, "--k", label="GLM basis")
+plt.axhline(0, color="k")
 plt.xlabel("Time from spike (sec)")
 plt.ylabel("Weight")
 plt.legend()
+
+# %%
 
 # compare model scores, as expected the training score is better with more parameters
 # this may could be over-fitting.
@@ -400,11 +405,14 @@ print(f"basis train score: {model_basis.score(conv_spk[:train_num_samp], neuron_
 print(f"\nfull history test score: {model.score(input_feature[train_num_samp:], neuron_count[window_size:][train_num_samp:], score_type='pseudo-r2-Cohen')}")
 print(f"basis test score: {model_basis.score(conv_spk[train_num_samp:], neuron_count[window_size:][train_num_samp:], score_type='pseudo-r2-Cohen')}")
 
+# %%
+
 # By comparing the model prediciton we can
 rate_basis = nap.Tsd(t=conv_spk.t, d=np.asarray(model_basis.predict(conv_spk.d))) * conv_spk.rate
 rate_history = nap.Tsd(t=conv_spk.t, d=np.asarray(model.predict(input_feature))) * conv_spk.rate
 ep = nap.IntervalSet(start=8819.4, end=8821)
 
+# split in two figure, one in which we have blue and orange, another with the black
 plt.figure()
 plt.plot(rate_history.restrict(ep), label="count history")
 plt.plot(rate_basis.restrict(ep), label="basis")
@@ -493,6 +501,7 @@ for receiver_neu in range(count.shape[1]):
 predicted_firing_rate = nap.TsdFrame(t=count[window_size:].t, d=predicted_firing_rate)
 
 # plot fit result outside training
+# use pynapple for time axis for all variables plotted for tick labels in imshow
 utils.plotting.plot_head_direction_tuning_model(tuning_curves, predicted_firing_rate, spikes, angle, threshold_hz=1,
                                                 start=8910, end=8960, cmap_label="hsv")
 
