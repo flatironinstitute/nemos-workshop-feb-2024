@@ -13,3 +13,4 @@ dandi
 git+https://github.com/flatironinstitute/nemos.git
 pytest
 click
+ipython

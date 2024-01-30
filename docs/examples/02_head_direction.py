@@ -401,17 +401,19 @@ print(f"\nfull history test score: {model.score(input_feature[train_num_samp:], 
 print(f"basis test score: {model_basis.score(conv_spk[train_num_samp:], neuron_count[window_size:][train_num_samp:], score_type='pseudo-r2-Cohen')}")
 
 # By comparing the model prediciton we can
-rate_basis = nap.Tsd(t=conv_spk.t[train_num_samp:], d=np.asarray(model_basis.predict(conv_spk[train_num_samp:])))
-rate_history = nap.Tsd(t=conv_spk.t[train_num_samp:], d=np.asarray(model.predict(input_feature[train_num_samp:])))
-ep = nap.IntervalSet(start=8962, end=8966)
+rate_basis = nap.Tsd(t=conv_spk.t, d=np.asarray(model_basis.predict(conv_spk.d))) * conv_spk.rate
+rate_history = nap.Tsd(t=conv_spk.t, d=np.asarray(model.predict(input_feature))) * conv_spk.rate
+ep = nap.IntervalSet(start=8819.4, end=8821)
 
 plt.figure()
 plt.plot(rate_history.restrict(ep), label="count history")
 plt.plot(rate_basis.restrict(ep), label="basis")
 
 idx_spikes = np.where(neuron_count.restrict(ep).d > 0)[0]
-plt.vlines(neuron_count.restrict(ep).t[idx_spikes],  -0.5, 0, color="k")
-plt.plot(neuron_count.smooth(5, 80).restrict(ep),color="k", label="smoothed spikes")
+plt.vlines(neuron_count.restrict(ep).t[idx_spikes],  -10, 0, color="k")
+plt.plot(neuron_count.smooth(5, 100).restrict(ep)*conv_spk.rate,color="k", label="smoothed spikes")
+plt.xlabel("Time (sec)")
+plt.ylabel("Firing Rate (Hz)")
 plt.legend()
 
 # %%
@@ -486,7 +488,7 @@ predicted_firing_rate = np.zeros((count.shape[0] - window_size, count.shape[1]))
 for receiver_neu in range(count.shape[1]):
     predicted_firing_rate[:, receiver_neu] = models[receiver_neu].predict(
         convolved_count
-    )
+    ) * conv_spk.rate
 
 predicted_firing_rate = nap.TsdFrame(t=count[window_size:].t, d=predicted_firing_rate)
 
