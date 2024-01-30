@@ -97,12 +97,14 @@ that our model can make:
 
 # first import things
 import numpy as np
+import sys
+sys.path.append('..')
 import utils
 import pynapple as nap
 import matplotlib.pyplot as plt
 
 # configure plots some
-plt.style.use('./utils/nemos.mplstyle')
+plt.style.use('../utils/nemos.mplstyle')
 
 # %%
 # to make this plot work well, keep this to three values

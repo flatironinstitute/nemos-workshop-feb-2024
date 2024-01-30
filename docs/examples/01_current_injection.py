@@ -34,6 +34,14 @@ we'll use throughout this workshop, as it simplifies handling this type of
 data. After we've explored the data some, we'll introduce the Generalized
 Linear Model and how to fit it with nemos.
 
+## Learning objectives {.keep-text}
+
+- Learn how to explore spiking data and do basic analyses using pynapple
+- Learn how to structure data for nemos
+- Learn how to fit a basic Generalized Linear Model using nemos
+- Learn how to retrieve the parameters and predictions from a fit GLM for
+  intrepetation.
+
 """
 
 # Import everything
@@ -44,10 +52,12 @@ import nemos as nmo
 import nemos.glm
 import numpy as np
 import pynapple as nap
+import sys
+sys.path.append('..')
 import utils
 
 # configure plots some
-plt.style.use('./utils/nemos.mplstyle')
+plt.style.use('../utils/nemos.mplstyle')
 
 # Set the default precision to float64, which is generally a good idea for
 # optimization purposes.
@@ -80,8 +90,7 @@ jax.config.update("jax_enable_x64", True)
 # - Stream the data. Format is [Neurodata Without Borders (NWB) standard](https://nwb-overview.readthedocs.io/en/latest/)
 # </div>
 
-path = os.path.join(os.getcwd(), "allen_478498617.nwb")
-utils.data.download_data(path, "https://osf.io/vf2nj/download")
+path = utils.data.download_data("allen_478498617.nwb", "https://osf.io/vf2nj/download")
 
 # %%
 # ## Pynapple
@@ -408,9 +417,10 @@ utils.plotting.tuning_curve_plot(tuning_curve)
 #   n_neurons)`. `n_time_bins` (as discussed above) and `n_neurons` must have
 #   the same value for both the predictors and spike counts.
 #
-# - predictors and spike counts must be `jax.numpy` arrays. As we'll see, we
-#   can easily convert between `jax.numpy` arrays, numpy arrays, and pynapple
-#   objects. -- add link to jax.numpy
+# - predictors and spike counts must be
+#   [`jax.numpy`](https://jax.readthedocs.io/en/latest/jax-101/01-jax-basics.html)
+#   arrays. As we'll see, we can easily convert between `jax.numpy` arrays,
+#   numpy arrays, and pynapple objects.
 #
 # !!! info "What is jax?"
 #
@@ -426,6 +436,11 @@ utils.plotting.tuning_curve_plot(tuning_curve)
 # spike counts to the proper resolution using the
 # [`bin_average`](https://pynapple-org.github.io/pynapple/reference/core/time_series/#pynapple.core.time_series.TsdTensor.bin_average)
 # method from pynapple:
+#
+# <div class="notes">
+#   - Get data from pynapple to nemos-ready format:
+#   - predictors and spikes must have same number of time points
+# </div>
 
 binned_current = current.bin_average(bin_size)
 
@@ -448,6 +463,10 @@ print(f"count sampling rate: {count.rate/1000:.02f} KHz")
 # use
 # [`np.expand_dims`](https://numpy.org/doc/stable/reference/generated/numpy.expand_dims.html)
 # to handle this.
+#
+# <div class="notes">
+#   - predictors must be 2d, spikes 1d
+# </div>
 
 # add singleton dimensions for axis 1 and 2.
 predictor = np.expand_dims(binned_current, (1, 2))
@@ -462,6 +481,10 @@ print(f"count shape: {count.shape}")
 # %%
 #
 # Our last step is to convert these to `jax.numpy` arrays.
+#
+# <div class="notes">
+#   - predictors and spikes must be jax arrays
+# </div>
 
 predictor = jax.numpy.asarray(predictor.values)
 count = jax.numpy.asarray(count.values)
@@ -525,6 +548,10 @@ count = jax.numpy.asarray(count.values)
 #     the problem. This means that LBFGS tends to find a solution faster and is
 #     often less sensitive to step-size. Try other solvers to see how they
 #     behave!
+#
+# <div class="notes">
+#   - GLM objects need regularizers and observation models
+# </div>
 
 model = nmo.glm.GLM(regularizer=nmo.regularizer.UnRegularized(solver_name="LBFGS"))
 
@@ -534,6 +561,10 @@ model = nmo.glm.GLM(regularizer=nmo.regularizer.UnRegularized(solver_name="LBFGS
 # fit our data! In the previous section, we prepared our model matrix
 # (`predictor`) and target data (`count`), so to fit the model we just need to
 # pass them to the model:
+#
+# <div class="notes">
+#   - call fit and retrieve parameters
+# </div>
 
 model.fit(predictor, count)
 
@@ -566,6 +597,10 @@ print(f"intercept_ shape: {model.intercept_.shape}")
 # the smoothed spike train. By calling `predict()` we can get the model's
 # predicted firing rate for this data. Note that this is just the output of the
 # model's linear-nonlinear step, as described earlier!
+#
+# <div class="notes">
+#   - generate and examine model predictions.
+# </div>
 
 predicted_fr = model.predict(predictor)
 # convert units from spikes/bin to spikes/sec
@@ -599,7 +634,7 @@ utils.plotting.current_injection_plot(current, spikes, firing_rate,
 #   the second -- Failure!
 #
 # - Our predicted firing rate has the periodicity we see in the smoothed spike
-# - train -- Success!
+#   train -- Success!
 #
 # - The predicted firing rate does not decay as the input remains on: the
 #   amplitudes are identical for each of the bumps within a given interval --
@@ -611,6 +646,10 @@ utils.plotting.current_injection_plot(current, spikes, firing_rate,
 #
 # To get a better sense, let's look at the mean firing rate over the whole
 # period:
+#
+# <div class="notes">
+#   - what do we see?
+# </div>
 
 # compare observed mean firing rate with the model predicted one
 print(f"Observed mean firing rate: {np.mean(count) / bin_size} Hz")
@@ -625,6 +664,10 @@ print(f"Predicted mean firing rate: {np.mean(predicted_fr)} Hz")
 # We can see this more directly by computing the tuning curve for our predicted
 # firing rate and comparing that against our smoothed spike train from the
 # beginning of this notebook. Pynapple can help us again with this:
+#
+# <div class="notes">
+#   - examine tuning curve -- what do we see?
+# </div>
 
 tuning_curve_model = nap.compute_1d_tuning_curves_continuous(predicted_fr, current, 15)
 fig = utils.plotting.tuning_curve_plot(tuning_curve)
@@ -649,6 +692,10 @@ fig.axes[0].legend()
 # model, but the firing rate is just the output of *LN*, its first two steps.
 # The firing rate is just the mean of a Poisson process, so we can pass it to
 # `jax.random.poisson`:
+#
+# <div class="notes">
+#   - Finally, let's look at spiking and scoring/metrics
+# </div>
 
 spikes = jax.random.poisson(jax.random.PRNGKey(0), predicted_fr.values)
 
@@ -686,12 +733,15 @@ print(f"log-likelihood: {log_likelihood}")
 # compared across datasets (because e.g., it won't account for difference in
 # noise levels). We provide the ability to compute the pseudo-$R^2$ for this
 # purpose:
-
 model.score(predictor, count, score_type='pseudo-r2-Cohen')
 
 # %%
 #
-# ## Further Exercises
+# ## Further Exercises {.strip-headers}
+#
+# <div class="notes">
+#   - what else can we do?
+# </div>
 #
 # Despite the simplicity of this dataset, there is still more that we can do
 # here. The following sections provide some possible exercises to try yourself!
@@ -740,7 +790,7 @@ model.score(predictor, count, score_type='pseudo-r2-Cohen')
 # return to this example after you've learned about `Basis` objects and how to
 # use them.
 #
-# ## Citation
+# ## Citation {.keep-text}
 #
 # The data used in this tutorial is from the Allen Brain Map, with the
 # [following

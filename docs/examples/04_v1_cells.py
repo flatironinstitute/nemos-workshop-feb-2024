@@ -24,18 +24,12 @@ jax.config.update("jax_enable_x64", True)
 # %%
 # ## DATA STREAMING
 #
+
 # Here we load the data from OSF. The data is a NWB file from the Allen Institute.
 # blblalba say more
 # Just run this cell
 
-path = os.path.join(os.getcwd(), "m691l1.nwb")
-if os.path.basename(path) not in os.listdir(os.getcwd()):
-    r = requests.get(f"https://osf.io/xesdm/download", stream=True)
-    block_size = 1024*1024
-    with open(path, "wb") as f:
-        for data in tqdm.tqdm(r.iter_content(block_size), unit="MB", unit_scale=True,
-            total=math.ceil(int(r.headers.get("content-length", 0))//block_size)):
-            f.write(data)
+path = utils.data.download_data("m691l1.nwb", "https://osf.io/xesdm/download")
 
 
 # %%
@@ -104,7 +98,5 @@ ax.plot(stim_filt)
 # Fit the model
  
 model = nmo.glm.GLM(regularizer=nmo.regularizer.UnRegularized(solver_name="LBFGS"))
-
-
 
 
