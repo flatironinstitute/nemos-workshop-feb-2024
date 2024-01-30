@@ -653,5 +653,5 @@ class PlotSlidingWindow():
 
     def run(self):
         anim = FuncAnimation(self.fig, self.update_fig, self.n_shift, interval=self.interval, repeat=True)
-        #plt.close(self.fig)
+        plt.close(self.fig)
         return anim
