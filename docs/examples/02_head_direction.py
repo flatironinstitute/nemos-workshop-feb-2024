@@ -236,11 +236,13 @@ print(f"Count shape: {neuron_count.shape}")
 window_size = int(history_window * neuron_count.rate)
 
 # convolve the counts with the identity matrix.
+# nemos convolution requires an extra dimension for the time series,
+# (num_samples, num_neurons), this is why we expand the dimension of the array.
 input_feature = nmo.utils.convolve_1d_trials(
-    np.eye(window_size), np.expand_dims(neuron_count.d, (0, 2))
-)[0]
+    np.eye(window_size), np.expand_dims(neuron_count, axis=1)
+)
 
-# convert to numpy array (nemos returns jax arrays) and get rid of the last row.
+# get rid of the neuron dimension and of the last row of the predictors
 input_feature = np.squeeze(input_feature[:-1])
 
 # %%
@@ -379,8 +381,9 @@ utils.plotting.plot_weighted_sum_basis(time, model.coef_, basis_kernels, lsq_coe
 # use expand dims instead
 # finish pr for convolve with pytree
 
-conv_spk = nmo.utils.convolve_1d_trials(basis_kernels, [neuron_count[:, None]])[0]
-conv_spk = nap.TsdFrame(t=count[window_size:].t, d=np.asarray(conv_spk[:-1, 0]))
+# as before, we add the neuron dimenision with expand_dims and convolve
+conv_spk = nmo.utils.convolve_1d_trials(basis_kernels, np.expand_dims(neuron_count, axis=1))
+conv_spk = nap.TsdFrame(t=count[window_size:].t, d=np.squeeze(conv_spk[:-1]))
 
 print(f"Raw count history as feature: {input_feature.shape}")
 print(f"Compressed count history as feature: {conv_spk.shape}")
@@ -460,7 +463,7 @@ plt.legend()
 # to get an array of predictors of shape, `(num_time_points, num_neurons, num_basis_funcs)`.
 # This can be done in nemos with a single call,
 
-convolved_count = nmo.utils.convolve_1d_trials(basis_kernels, [count.values])[0]
+convolved_count = nmo.utils.convolve_1d_trials(basis_kernels, count.values)
 convolved_count = np.asarray(convolved_count[:-1])
 
 # %%
