@@ -211,7 +211,7 @@ obj = utils.plotting.PlotSlidingWindow(
     add_after=0.8,
 )
 anim = obj.run()
-HTML(anim.to_html5_video())
+#HTML(anim.to_html5_video())
 
 # %%
 # Clearly, if $t$ is smaller than the window size, we won't have a full spike history for estimating the rate.
