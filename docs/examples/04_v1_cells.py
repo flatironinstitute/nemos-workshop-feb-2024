@@ -22,6 +22,7 @@ import tqdm
 import sys
 sys.path.append('..')
 import utils
+plt.style.use('../utils/nemos.mplstyle')
 
 # required for second order methods (BFGS, Newton-CG)
 jax.config.update("jax_enable_x64", True)
@@ -120,7 +121,6 @@ sta
 # %%
 #
 # We index into this in a 2d manner: row, column (here we only have 1 column).
-print(sta[1])
 sta[1, 0]
 
 # %%
@@ -138,31 +138,126 @@ for i, t in enumerate(sta.t):
 #
 # To convert this to the spatial filter we'll use for the GLM, let's take the
 # average across the bins that look informative: -.125 to -.05
-response = np.mean(sta.get(-0.125, -0.05), axis=0)[0]
+receptive_field = np.mean(sta.get(-0.125, -0.05), axis=0)[0]
 
 fig, ax = plt.subplots(1, 1, figsize=(4,4))
-ax.imshow(response)
+ax.imshow(receptive_field)
 
 # %%
-# Now we can compute the dot-product of the response with the stimulus to create a single 1 dimensional input for the GLM model.
+#
+# This receptive field gives us the spatial part of the linear response: it
+# gives a map of weights that we use for a weighted sum on an image. There are
+# multiple ways of performing this operation:
 
-stim_filt = np.dot(
-    np.reshape(stimulus, (stimulus.shape[0], np.prod(stimulus.shape[1:]))), # if you know the shortcut let me know
-    np.reshape(response, (np.prod(response.shape), 1))
-    )
+# element-wise multiplication and sum
+print((receptive_field * stimulus[0]).sum())
+# dot product of flattened versions
+print(np.dot(receptive_field.flatten(), stimulus[0].flatten()))
 
 # %%
-# And everything stays in pynapple yeah
+#
+# When performing this operation on multiple stimuli, things become slightly
+# more complicated. For loops on the above methods would work, but would be
+# slow. Reshaping and using the dot product is one common method, as are
+# methods like `np.tensordot`.
+#
+# We'll use einsum to do this, which is a convenient way of representing many
+# different matrix operations:
+
+filtered_stimulus = np.einsum('t h w, h w -> t', stimulus, receptive_field)
+# add the extra dimension for feature
+filtered_stimulus = np.expand_dims(filtered_stimulus, 1)
+
+# %%
+#
+# This notation says: take these arrays with dimensions `(t,h,w)` and `(h,w)`
+# and multiply and sum to get an array of shape `(t,)`. This performs the same
+# operations as above.
+#
+# And this remains a pynapple object, so we can easily visualize it!
 
 fig, ax = plt.subplots(1, 1, figsize=(12,4))
-ax.plot(stim_filt)
+ax.plot(filtered_stimulus)
 
-# spikes -> restrict to same time support as stim_filt -> count
-# stim_filt -> bin_average to same resolution
+# %%
+#
+# But what is this? It's how much each frame in the video should drive our
+# neuron, based on the receptive field we fit using the spike-triggered
+# average.
+#
+# This, then, is the spatial component of our input, as described above. We'll
+# now use the GLM to fit the temporal component. To do that, let's get this and
+# our spike counts into the proper format for nemos:
 
-# %% 
-# Fit the model
- 
-model = nmo.glm.GLM(regularizer=nmo.regularizer.UnRegularized(solver_name="LBFGS"))
+# grab spikes from when we were showing our stimulus, and bin at 1 msec
+# resolution
+bin_size = .001
+counts = spikes.restrict(filtered_stimulus.time_support).count(bin_size)
+print(counts.rate)
+print(filtered_stimulus.rate)
 
+# %%
+#
+# Hold on, our stimulus is at a much lower rate than what we want for our rates
+# -- in previous examples, our input has been at a higher rate than our spikes,
+# and so we used `bin_average` to down-sample to the appropriate rate. When the
+# input is at a lower rate, we need to think a little more carefully about how
+# to up-sample.
+print(counts[:5])
+print(filtered_stimulus[:5])
 
+# %%
+#
+# What was the visual input to the neuron at time 0.005? It was the same input
+# as time 0. At time 0.0015? Same thing, up until we pass time 0.025017. Thus,
+# we want to "fill forward" the values of our input, and we have pynapple
+# convenience function to do so:
+filtered_stimulus = utils.data.fill_forward(counts, filtered_stimulus)
+filtered_stimulus
+
+# %%
+#
+# We can see that the time points are now aligned, and we've filled forward the
+# values the way we'd like.
+#
+# Now, similar to the [head direction tutorial](../02_head_direction), we'll
+# use the log-stretched raised cosine basis to create the predictor for our
+# GLM:
+basis = nmo.basis.RaisedCosineBasisLog(8)
+window_size = 100
+time, basis_kernels = basis.evaluate_on_grid(window_size)
+time *= bin_size * window_size
+convolved_input = nmo.utils.convolve_1d_trials(basis_kernels, filtered_stimulus)
+# convolved_input has shape (n_time_pts, n_features, n_basis_funcs), and
+# n_features is the singleton dimension from filtered_stimulus, so let's
+# squeeze it out:
+convolved_input = np.squeeze(convolved_input)
+# and, as also described in the head direction tutorial, when doing this we
+# need to remove the first window_size time points from the neuron counts and
+# the last time point from the convolved input:
+counts = counts[window_size:]
+convolved_input = convolved_input[:-1]
+# and grab the counts for our single neuron
+counts = counts[:, 0]
+
+# %%
+#
+# Now we're ready to fit the model! Let's do it, same as before:
+model = utils.model.GLM(regularizer=nmo.regularizer.UnRegularized(solver_name="LBFGS"))
+model.fit(convolved_input, counts)
+
+# %%
+#
+# We have our coefficients for each of our 8 basis functions, let's combine
+# them to get the temporal time course of our input:
+
+temp_weights = np.einsum('b, t b -> t', model.coef_, basis_kernels)
+plt.plot(time, temp_weights)
+
+# %%
+#
+# Now what else to do:
+# - split into test and train
+#
+# - then examine: other choices for that spatial receptive field, changing
+#   basis parameters, regularization on temporal time course
