@@ -588,7 +588,7 @@ class PlotSlidingWindow():
                                        alpha=0.3,
                                        color="tomato")
         plot_ep = nap.IntervalSet(- self.add_before + self.start,
-                                  self.start + self.history_window + self.n_shift*self.bin_size*self.plot_every +
+                                  self.start + self.history_window + (self.n_shift - 1)*self.bin_size*self.plot_every +
                                   self.add_after)
         color = ax.step(self.counts.restrict(plot_ep).t, self.counts.restrict(plot_ep).d, where="post")[0].get_color()
 

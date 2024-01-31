@@ -194,12 +194,13 @@ plt.tight_layout()
 
 # %%
 # For each time point, we shift our window one bin at the time and vertically stack the spike count history in a matrix.
-# Each row of the matrix will be used as the predictors for the rate in the next bin (red window in the figure).
+# Each row of the matrix will be used as the predictors for the rate in the next bin (red narrow rectangle in
+# the figure).
 
 n_shift = 20
 obj = utils.plotting.PlotSlidingWindow(
     neuron_count,
-    20,
+    n_shift,
     history_window,
     bin_size,
     float(interval.start),
@@ -208,15 +209,15 @@ obj = utils.plotting.PlotSlidingWindow(
     (8, 8),
     200,
     add_before=0,
-    add_after=0.8,
+    add_after=0,
 )
 anim = obj.run()
 HTML(anim.to_html5_video())
 
 # %%
-# Clearly, if $t$ is smaller than the window size, we won't have a full spike history for estimating the rate.
+# If $t$ is smaller than the window size, we won't have a full window of spike history for estimating the rate.
 # One may think of padding the window (with zeros for example) but this may generate weird border artifacts.
-# To avoid that, we can simply restrict to times $t$ larger than the prediction window.
+# To avoid that, we can simply restrict our analysis to times $t$ larger than the window.
 # In this case, the total number of possible shifts is ("num_samples - window_size + 1").
 # We also have to discard the very last shift of the matrix, since we don't have any more counts to predict
 # (the red rectangle above is out of range), leaving us with "num_samples - window_size" rows.
