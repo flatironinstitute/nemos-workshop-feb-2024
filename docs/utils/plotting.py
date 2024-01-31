@@ -621,7 +621,7 @@ class PlotSlidingWindow():
         yticks = ax.get_yticks()
         original_ytick_labels = ax.get_yticklabels()
         ax.set_yticks(yticks + self.ylim[1] - self.ylim[0])
-        reverse_ytick_labels = [label._text for label in reversed(original_ytick_labels)]
+        reverse_ytick_labels = [label.get_text() for label in reversed(original_ytick_labels)]
         ax.set_yticklabels(reverse_ytick_labels)
 
         ax.set_ylabel("Sample Index")
