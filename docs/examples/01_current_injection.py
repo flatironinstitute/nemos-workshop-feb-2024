@@ -409,13 +409,12 @@ utils.plotting.tuning_curve_plot(tuning_curve)
 #
 # - predictors and spike counts must have the same number of time points.
 #
-# - predictors must be three-dimensional, with shape `(n_time_bins, n_neurons,
-#   n_features)`. In this example, we have a single neuron and a single feature
-#   (the injected current).
+# - predictors must be two-dimensional, with shape `(n_time_bins, n_features)`.
+#   In this example, we have a single feature (the injected current).
 #
-# - spike counts must be two-dimensional, with shape `(n_time_bins,
-#   n_neurons)`. `n_time_bins` (as discussed above) and `n_neurons` must have
-#   the same value for both the predictors and spike counts.
+# - spike counts must be one-dimensional, with shape `(n_time_bins,)`. As
+#   discussed above, `n_time_bins` must be the same for both the predictors and
+#   spike counts.
 #
 # - predictors and spike counts must be
 #   [`jax.numpy`](https://jax.readthedocs.io/en/latest/jax-101/01-jax-basics.html)
@@ -456,29 +455,39 @@ print(f"count sampling rate: {count.rate/1000:.02f} KHz")
 #
 # Secondly, we have to reshape our variables so that they are the proper shape:
 #
-# - `predictors`: `(n_time_bins, n_neurons, n_features)`
-# - `count`: `(n_time_bins, n_neurons)`
+# - `predictors`: `(n_time_bins, n_features)`
+# - `count`: `(n_time_bins, )`
 #
-# Because we only have a single neuron and a single predictor feature, we'll
-# use
+# Because we only have a single predictor feature, we'll use
 # [`np.expand_dims`](https://numpy.org/doc/stable/reference/generated/numpy.expand_dims.html)
-# to handle this.
+# to handle .
 #
 # <div class="notes">
 #   - predictors must be 2d, spikes 1d
 # </div>
 
-# add singleton dimensions for axis 1 and 2.
-predictor = np.expand_dims(binned_current, (1, 2))
+# add singleton dimensions for axis 1.
+predictor = np.expand_dims(binned_current, 1)
+# grab the spike counts for our one neuron
+count = count[:, 0]
 
 # check that the dimensionality matches nemos expectation
 print(f"predictor shape: {predictor.shape}")
-# we don't need to change the spike count shape -- a TsdFrame with a single
-# column already has 2d data.
 print(f"count shape: {count.shape}")
 
-
 # %%
+# !!! info "What if I have more than one neuron?"
+#
+#     In this example, we're only fitting data for a single neuron, but you
+#     might wonder how the data should be shaped if you have more than one
+#     neuron -- do you add an extra dimension? or concatenate neurons along one
+#     of the existing dimensions?
+#
+#     In nemos, we always fit Generalized Linear Models to a single neuron at a
+#     time. We'll discuss this more in the [following
+#     tutorial](../02_head_direction/), but briefly: you get the same answer
+#     whether you fit the neurons separately or simultaneously, and fitting
+#     them separately can make your life easier.
 #
 # Our last step is to convert these to `jax.numpy` arrays.
 #
@@ -553,7 +562,7 @@ count = jax.numpy.asarray(count.values)
 #   - GLM objects need regularizers and observation models
 # </div>
 
-model = nmo.glm.GLM(regularizer=nmo.regularizer.UnRegularized(solver_name="LBFGS"))
+model = utils.model.GLM(regularizer=nmo.regularizer.UnRegularized(solver_name="LBFGS"))
 
 # %%
 #
@@ -578,17 +587,13 @@ print(f"firing_rate(t) = exp({model.coef_} * current(t) + {model.intercept_})")
 
 # %%
 #
-# Note that `model.coef_` and `model.intercept_` are not scalars, but
-# multi-dimensional:
+# Note that `model.coef_` has shape `(n_features, )`, while `model.intercept_`
+# is a scalar:
 
 print(f"coef_ shape: {model.coef_.shape}")
 print(f"intercept_ shape: {model.intercept_.shape}")
 
 # %%
-#
-# `model.coef_` has shape `(n_neurons, n_features)`, while `model.intercept_`
-# has shape `(n_neurons)`, with those values coming from the model matrix we
-# passed during fitting.
 #
 # It's nice to get the parameters above, but we can't tell how well our model
 # is doing by looking at them. So how should we evaluate our model?

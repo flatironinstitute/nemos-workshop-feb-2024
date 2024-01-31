@@ -67,7 +67,7 @@ class GLM(nmo.glm.GLM):
         try:
             super().fit(X, y, init_params=init_params)
         finally:
-            self.coef_ = jax.tree_map(np.squeeze, self.coef_)
+            self.coef_ = jax.tree_map(lambda x: jnp.atleast_1d(np.squeeze(x)), self.coef_)
             self.intercept_ = jax.tree_map(np.squeeze, self.intercept_)
         return self
 
@@ -82,7 +82,7 @@ class GLM(nmo.glm.GLM):
         try:
             rate = super().predict(X)
         finally:
-            self.coef_ = jax.tree_map(np.squeeze, self.coef_)
+            self.coef_ = jax.tree_map(lambda x: jnp.atleast_1d(np.squeeze(x)), self.coef_)
             self.intercept_ = jax.tree_map(np.squeeze, self.intercept_)
         return jax.numpy.squeeze(rate)
 
@@ -107,7 +107,7 @@ class GLM(nmo.glm.GLM):
         try:
             score = super().score(X, y, score_type=score_type)
         finally:
-            self.coef_ = jax.tree_map(np.squeeze, self.coef_)
+            self.coef_ = jax.tree_map(lambda x: jnp.atleast_1d(np.squeeze(x)), self.coef_)
             self.intercept_ = jax.tree_map(np.squeeze, self.intercept_)
         return score
 
