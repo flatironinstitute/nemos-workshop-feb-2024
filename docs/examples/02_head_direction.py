@@ -444,7 +444,7 @@ plt.legend()
 model_basis_second_half = utils.model.GLM(regularizer=nmo.regularizer.UnRegularized("LBFGS"))
 model_basis_second_half.fit(conv_spk.restrict(second_half), neuron_count.restrict(second_half))
 
-# compute responses with the 2nd half fit
+# compute responses for the 2nd half fit
 self_connection_second_half = np.matmul(basis_kernels, model_basis_second_half.coef_)
 
 plt.figure()
