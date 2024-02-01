@@ -777,7 +777,7 @@ def plot_rates_and_smoothed_counts(counts, rate_dict,
 
     idx_spikes = np.where(counts.restrict(ep).d > 0)[0]
     plt.vlines(counts.restrict(ep).t[idx_spikes], -10, 0, color="k")
-    plt.plot(counts.smooth(smooth_std, smooth_ws).restrict(ep) * counts.rate, color="k", label="smoothed spikes")
+    plt.plot(counts.smooth(smooth_std, smooth_ws).restrict(ep) * counts.rate, color="k", label="Smoothed spikes")
     plt.axhline(0, color="k")
     plt.xlabel("Time (sec)")
     plt.ylabel("Firing Rate (Hz)")
