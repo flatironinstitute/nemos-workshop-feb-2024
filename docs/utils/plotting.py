@@ -12,6 +12,7 @@ from typing import Optional
 from IPython.display import HTML
 import nemos as nmo
 
+
 def tuning_curve_plot(tuning_curve: pd.DataFrame):
     fig, ax = plt.subplots(1, 1)
     tc_idx = tuning_curve.index.to_numpy()
