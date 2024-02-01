@@ -481,19 +481,7 @@ rate_basis = nap.Tsd(t=conv_spk.t, d=np.asarray(model_basis.predict(conv_spk.d))
 rate_history = nap.Tsd(t=conv_spk.t, d=np.asarray(model.predict(input_feature))) * conv_spk.rate
 ep = nap.IntervalSet(start=8819.4, end=8821)
 
-# split in two figure, one in which we have blue and orange, another with the black
-# plt.figure()
-# plt.plot(rate_history.restrict(ep), label="count history")
-# plt.plot(rate_basis.restrict(ep), label="basis")
-#
-# idx_spikes = np.where(neuron_count.restrict(ep).d > 0)[0]
-# plt.vlines(neuron_count.restrict(ep).t[idx_spikes],  -10, 0, color="k")
-# plt.plot(neuron_count.smooth(5, 100).restrict(ep)*conv_spk.rate,color="k", label="smoothed spikes")
-# plt.axhline(0, color="k")
-# plt.xlabel("Time (sec)")
-# plt.ylabel("Firing Rate (Hz)")
-# plt.legend()
-
+# plot the rates
 utils.plotting.plot_rates_and_smoothed_counts(
     neuron_count,
     {"Self-connection raw history":rate_history, "Self-connection bsais": rate_basis}
