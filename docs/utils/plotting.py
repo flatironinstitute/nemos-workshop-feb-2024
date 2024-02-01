@@ -9,7 +9,7 @@ import pynapple as nap
 import pandas as pd
 import matplotlib as mpl
 from typing import Optional
-
+from IPython.display import HTML
 
 
 def tuning_curve_plot(tuning_curve: pd.DataFrame):
@@ -450,8 +450,8 @@ def plot_count_history_window(
 def plot_features(
         input_feature: NDArray,
         sampling_rate: float,
-        n_rows: int,
-        suptitle:str
+        suptitle:str,
+        n_rows: int = 20
 ):
     """
     Plot feature matrix.
@@ -552,16 +552,16 @@ class PlotSlidingWindow():
     def __init__(
             self,
             counts: nap.Tsd,
-            n_shift: int,
-            history_window: float,
-            bin_size: float,
             start: float,
-            ylim: tuple[float, float],
-            plot_every: int,
-            figsize=tuple[float,float],
-            interval: int = 10,
-            add_before: float = 0.2,
-            add_after: float = 0.2
+            n_shift: int = 20,
+            history_window: float = 0.8,
+            bin_size: float = 0.01,
+            ylim: tuple[float, float] = (0, 3),
+            plot_every: int = 1,
+            figsize: tuple[float, float] = (8, 8),
+            interval: int = 200,
+            add_before: float = 0.,
+            add_after: float = 0.
     ):
         self.counts = counts
         self.n_shift = n_shift
@@ -655,3 +655,114 @@ class PlotSlidingWindow():
         anim = FuncAnimation(self.fig, self.update_fig, self.n_shift, interval=self.interval, repeat=True)
         plt.close(self.fig)
         return anim
+
+
+def run_animation(counts: nap.Tsd, start: float):
+    anim = PlotSlidingWindow(
+        counts,
+        start
+    ).run()
+    return HTML(anim.to_html5_video())
+
+
+def plot_coupling(responses, cmap_name="seismic",
+                      figsize=(10, 8), fontsize=15, alpha=0.5):
+    # plot heatmap
+    sum_resp = np.sum(responses, axis=2)
+    # normalize by cols (for fixed receiver neuron, scale all responses
+    # so that the strongest peaks to 1)
+    sum_resp_n = (sum_resp.T / sum_resp.max(axis=1)).T
+
+    # scale to 0,1
+    color = -0.5 * (sum_resp_n - sum_resp_n.min()) / sum_resp_n.min()
+
+    cmap = plt.get_cmap(cmap_name)
+    n_row, n_col, n_tp = responses.shape
+    time = np.arange(n_tp)
+    fig, axs = plt.subplots(n_row, n_col, figsize=figsize, sharey="row")
+    for rec, rec_resp in enumerate(responses):
+        for send, resp in enumerate(rec_resp):
+            axs[rec, send].plot(time, responses[rec, send], color="k")
+            axs[rec, send].spines["left"].set_visible(False)
+            axs[rec, send].spines["bottom"].set_visible(False)
+            axs[rec, send].set_xticks([])
+            axs[rec, send].set_yticks([])
+            axs[rec, send].axhline(0, color="k", lw=0.5)
+
+    for rec, rec_resp in enumerate(responses):
+        for send, resp in enumerate(rec_resp):
+            xlim = axs[rec, send].get_xlim()
+            ylim = axs[rec, send].get_ylim()
+            rect = plt.Rectangle(
+                (xlim[0], ylim[0]),
+                xlim[1] - xlim[0],
+                ylim[1] - ylim[0],
+                alpha=alpha,
+                color=cmap(color[rec, send]),
+                zorder=1
+            )
+            axs[rec, send].add_patch(rect)
+            axs[rec, send].set_xlim(xlim)
+            axs[rec, send].set_ylim(ylim)
+    axs[n_row // 2, 0].set_ylabel("receiver\n", fontsize=fontsize)
+    axs[n_row - 1, n_col // 2].set_xlabel("\nsender", fontsize=fontsize)
+
+    plt.suptitle("Pairwise Interaction", fontsize=fontsize)
+
+
+def plot_history_window(neuron_count, interval, window_size_sec):
+    bin_size = 1 / neuron_count.rate
+    # define the count history window used for prediction
+    history_interval = nap.IntervalSet(
+        start=interval["start"][0], end=window_size_sec + interval["start"][0] - 0.001
+    )
+
+    # define the observed counts bin (the bin right after the history window)
+    observed_count_interval = nap.IntervalSet(
+        start=history_interval["end"], end=history_interval["end"] + bin_size
+    )
+
+    fig, _ = plt.subplots(1, 1, figsize=(8, 3.5))
+    plt.step(
+        neuron_count.restrict(interval).t, neuron_count.restrict(interval).d, where="post"
+    )
+    ylim = plt.ylim()
+    plt.axvspan(
+        history_interval["start"][0],
+        history_interval["end"][0],
+        *ylim,
+        alpha=0.4,
+        color="orange",
+        label="history",
+    )
+    plt.axvspan(
+        observed_count_interval["start"][0],
+        observed_count_interval["end"][0],
+        *ylim,
+        alpha=0.4,
+        color="tomato",
+        label="predicted",
+    )
+    plt.ylim(ylim)
+    plt.title("Spike Count Time Series")
+    plt.xlabel("Time (sec)")
+    plt.ylabel("Counts")
+    plt.legend()
+    plt.tight_layout()
+    return fig
+
+
+def plot_convolved_counts(counts, conv_spk, *epochs, figsize=(6.5, 4.5)):
+    n_rows = len(epochs)
+    fig, axs = plt.subplots(n_rows, 1, sharey="all", figsize=figsize)
+    for row, ep in enumerate(epochs):
+        axs[row].plot(conv_spk.restrict(ep))
+        cnt_ep = counts.restrict(ep)
+        axs[row].vlines(cnt_ep.t[cnt_ep.d > 0], -1, -0.1, "k", lw=2, label="spikes")
+
+        if row == 0:
+            axs[0].set_title("Convolved Counts")
+            axs[0].legend()
+        elif row == n_rows - 1:
+            axs[row].set_xlabel("Time (sec)")
+    return fig
