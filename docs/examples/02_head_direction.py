@@ -564,7 +564,7 @@ utils.plotting.plot_rates_and_smoothed_counts(
     neuron_count,
     {"Self-connection: raw history": rate_history,
      "Self-connection: bsais": rate_basis,
-     "Coupled: basis": predicted_firing_rate[:, 0]}
+     "All-to-all: basis": predicted_firing_rate[:, 0]}
 )
 
 # %%
