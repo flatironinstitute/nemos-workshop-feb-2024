@@ -543,7 +543,7 @@ def plot_weighted_sum_basis(time, weights, basis_kernels, basis_coeff):
     axs[3].plot(time, basis_kernels @ basis_coeff, "--k")
     axs[3].set_xlabel("Time from spike (sec)")
     axs[3].set_ylabel("Weight")
-
+    axs[3].axhline(0, color="k", lw=0.5)
     plt.tight_layout()
     return fig
 
