@@ -766,3 +766,20 @@ def plot_convolved_counts(counts, conv_spk, *epochs, figsize=(6.5, 4.5)):
         elif row == n_rows - 1:
             axs[row].set_xlabel("Time (sec)")
     return fig
+
+
+def plot_rates_and_smoothed_counts(counts, rate_dict,
+                                   start=8819.4, end=8821, smooth_std=5, smooth_ws=100):
+    ep = nap.IntervalSet(start=start, end=end)
+    fig = plt.figure()
+    for key in  rate_dict:
+        plt.plot(rate_dict[key].restrict(ep), label=key)
+
+    idx_spikes = np.where(counts.restrict(ep).d > 0)[0]
+    plt.vlines(counts.restrict(ep).t[idx_spikes], -10, 0, color="k")
+    plt.plot(counts.smooth(smooth_std, smooth_ws).restrict(ep) * counts.rate, color="k", label="smoothed spikes")
+    plt.axhline(0, color="k")
+    plt.xlabel("Time (sec)")
+    plt.ylabel("Firing Rate (Hz)")
+    plt.legend()
+    return fig

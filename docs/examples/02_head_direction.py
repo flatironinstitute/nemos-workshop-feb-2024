@@ -260,18 +260,18 @@ model = utils.model.GLM(regularizer=nmo.regularizer.UnRegularized("LBFGS"))
 model.fit(input_feature.restrict(first_half), neuron_count.restrict(first_half))
 
 plt.figure()
-plt.title("spike history weights")
-# flip time plot how a spike affects the future rate
-plt.plot(np.arange(window_size) / count.rate, model.coef_)
+plt.title("Spike History Weights")
+plt.plot(np.arange(window_size) / count.rate, model.coef_, lw=2, label="GLM raw history 1st Half")
 plt.axhline(0, color="k")
 plt.xlabel("Time From Spike (sec)")
 plt.ylabel("Kernel")
+plt.legend()
 
 # %%
 # The response in the previous figure seems noise added to a decay, therefore the response
 # can be described with fewer degrees of freedom. In other words, it looks like we
 # are using way too many weights to describe a simple response.
-# If we are correct, what would happen if we re-fit the wrights on the other half of the data?
+# If we are correct, what would happen if we re-fit the weights on the other half of the data?
 
 # fit on the test set
 
@@ -279,14 +279,13 @@ model_second_half = utils.model.GLM(regularizer=nmo.regularizer.UnRegularized("L
 model_second_half.fit(input_feature.restrict(second_half), neuron_count.restrict(second_half))
 
 plt.figure()
-plt.title("spike history weights")
-# flip time plot how a spike affects the future rate
-plt.plot(np.arange(window_size) / count.rate, model.coef_)
-plt.plot(np.arange(window_size) / count.rate, model_second_half.coef_)
+plt.title("Spike History Weights")
+plt.plot(np.arange(window_size) / count.rate, model.coef_, label="GLM raw history 1st Half", lw=2)
+plt.plot(np.arange(window_size) / count.rate, model_second_half.coef_, color="orange", label="GLM raw history 2nd Half", lw=2)
 plt.axhline(0, color="k")
 plt.xlabel("Time From Spike (sec)")
 plt.ylabel("Kernel")
-
+plt.legend()
 # %%
 # What can we conclude?
 #
@@ -432,13 +431,35 @@ print(self_connection.shape)
 plt.figure()
 plt.title("Spike History Weights")
 plt.plot(time, model.coef_, alpha=0.3, label="GLM raw history")
-plt.plot(time, self_connection, "--k", label="GLM basis")
+plt.plot(time, self_connection, "--k", label="GLM basis", lw=2)
 plt.axhline(0, color="k")
 plt.xlabel("Time from spike (sec)")
 plt.ylabel("Weight")
 plt.legend()
 
 # %%
+# Let's check if our new estimate does a better job in terms of over-fitting. We can do that
+# by visual comparison, as we did previously.
+
+model_basis_second_half = utils.model.GLM(regularizer=nmo.regularizer.UnRegularized("LBFGS"))
+model_basis_second_half.fit(conv_spk.restrict(second_half), neuron_count.restrict(second_half))
+self_connection_second_half = np.matmul(basis_kernels, model_basis_second_half.coef_)
+
+plt.figure()
+plt.title("Spike History Weights")
+plt.plot(time, model.coef_, "k", alpha=0.3, label="GLM raw history 1st half")
+plt.plot(time, model_second_half.coef_, alpha=0.3, color="orange", label="GLM raw history 2nd half")
+plt.plot(time, self_connection, "--k", lw=2, label="GLM basis 1st half")
+plt.plot(time, self_connection_second_half, color="orange", lw=2, ls="--", label="GLM basis 2nd half")
+plt.axhline(0, color="k")
+plt.xlabel("Time from spike (sec)")
+plt.ylabel("Weight")
+plt.legend()
+
+
+# %%
+# Or we can score the model predictions using both one half of the set for training
+# and the other half for testing.
 
 # compare model scores, as expected the training score is better with more parameters
 # this may could be over-fitting.
@@ -446,30 +467,35 @@ print(f"full history train score: {model.score(input_feature.restrict(first_half
 print(f"basis train score: {model_basis.score(conv_spk.restrict(first_half), neuron_count.restrict(first_half), score_type='pseudo-r2-Cohen')}")
 
 # %%
-# To check that, let's try to see ho the model perform on unseen data.
+# To check that, let's try to see ho the model perform on unseen data and obtaining a test
+# score.
 print(f"\nfull history test score: {model.score(input_feature.restrict(second_half), neuron_count.restrict(second_half), score_type='pseudo-r2-Cohen')}")
 print(f"basis test score: {model_basis.score(conv_spk.restrict(second_half), neuron_count.restrict(second_half), score_type='pseudo-r2-Cohen')}")
 
 # %%
 
-# By comparing the model prediciton we can
+# Let's extract
 rate_basis = nap.Tsd(t=conv_spk.t, d=np.asarray(model_basis.predict(conv_spk.d))) * conv_spk.rate
 rate_history = nap.Tsd(t=conv_spk.t, d=np.asarray(model.predict(input_feature))) * conv_spk.rate
 ep = nap.IntervalSet(start=8819.4, end=8821)
 
 # split in two figure, one in which we have blue and orange, another with the black
-plt.figure()
-plt.plot(rate_history.restrict(ep), label="count history")
-plt.plot(rate_basis.restrict(ep), label="basis")
+# plt.figure()
+# plt.plot(rate_history.restrict(ep), label="count history")
+# plt.plot(rate_basis.restrict(ep), label="basis")
+#
+# idx_spikes = np.where(neuron_count.restrict(ep).d > 0)[0]
+# plt.vlines(neuron_count.restrict(ep).t[idx_spikes],  -10, 0, color="k")
+# plt.plot(neuron_count.smooth(5, 100).restrict(ep)*conv_spk.rate,color="k", label="smoothed spikes")
+# plt.axhline(0, color="k")
+# plt.xlabel("Time (sec)")
+# plt.ylabel("Firing Rate (Hz)")
+# plt.legend()
 
-idx_spikes = np.where(neuron_count.restrict(ep).d > 0)[0]
-plt.vlines(neuron_count.restrict(ep).t[idx_spikes],  -10, 0, color="k")
-plt.plot(neuron_count.smooth(5, 100).restrict(ep)*conv_spk.rate,color="k", label="smoothed spikes")
-plt.axhline(0, color="k")
-plt.xlabel("Time (sec)")
-plt.ylabel("Firing Rate (Hz)")
-plt.legend()
-
+utils.plotting.plot_rates_and_smoothed_counts(
+    neuron_count,
+    {"Self-connection raw history":rate_history, "Self-connection bsais": rate_basis}
+)
 
 # %%
 # ### All-to-all Connectivity
@@ -536,11 +562,20 @@ for receiver_neu in range(count.shape[1]):
 
 predicted_firing_rate = nap.TsdFrame(t=count[window_size:].t, d=predicted_firing_rate)
 
-# plot fit result outside training
+# %%
+# Plot fit predictions over a short window not used for training.
+
 # use pynapple for time axis for all variables plotted for tick labels in imshow
 utils.plotting.plot_head_direction_tuning_model(tuning_curves, predicted_firing_rate, spikes, angle, threshold_hz=1,
                                                 start=8910, end=8960, cmap_label="hsv")
-
+# %%
+# Let's see if our firing rate predictions improved and in what sense,
+utils.plotting.plot_rates_and_smoothed_counts(
+    neuron_count,
+    {"Self-connection: raw history": rate_history,
+     "Self-connection: bsais": rate_basis,
+     "Coupled: basis": predicted_firing_rate[:, 0]}
+)
 
 # %%
 # Compute the responses by multiplying the coefficients with the basis and adding
