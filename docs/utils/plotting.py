@@ -10,7 +10,7 @@ import pandas as pd
 import matplotlib as mpl
 from typing import Optional
 from IPython.display import HTML
-
+import nemos as nmo
 
 def tuning_curve_plot(tuning_curve: pd.DataFrame):
     fig, ax = plt.subplots(1, 1)
@@ -776,10 +776,20 @@ def plot_rates_and_smoothed_counts(counts, rate_dict,
         plt.plot(rate_dict[key].restrict(ep), label=key)
 
     idx_spikes = np.where(counts.restrict(ep).d > 0)[0]
-    plt.vlines(counts.restrict(ep).t[idx_spikes], -10, -1, color="k")
+    plt.vlines(counts.restrict(ep).t[idx_spikes], -8, -1, color="k")
     plt.plot(counts.smooth(smooth_std, smooth_ws).restrict(ep) * counts.rate, color="k", label="Smoothed spikes")
     plt.axhline(0, color="k")
     plt.xlabel("Time (sec)")
     plt.ylabel("Firing Rate (Hz)")
     plt.legend()
+    return fig
+
+
+def plot_basis(n_basis_funcs=8, window_size_sec=0.8):
+    fig = plt.figure()
+    basis = nmo.basis.RaisedCosineBasisLog(n_basis_funcs=n_basis_funcs)
+    time, basis_kernels = basis.evaluate_on_grid(1000)
+    time *= window_size_sec
+    plt.plot(time, basis_kernels)
+    plt.xlabel("time (sec)")
     return fig

@@ -316,13 +316,7 @@ plt.legend()
 # in neuroscience: whether an input happened 1 or 5 msec ago matters a lot,
 # whereas whether an input happened 51 or 55 msec ago is less important.
 
-plt.figure()
-basis = nmo.basis.RaisedCosineBasisLog(n_basis_funcs=8)
-time, basis_kernels = basis.evaluate_on_grid(1000)
-time *= window_size_sec
-plt.plot(time, basis_kernels)
-plt.axhline(0, color="k", lw=0.5)
-plt.xlabel("time (sec)")
+utils.plotting.plot_basis()
 
 # %%
 # !!! info
