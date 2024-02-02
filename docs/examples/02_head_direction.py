@@ -34,7 +34,6 @@ plt.style.use(workshop_utils.STYLE_FILE)
 
 path = workshop_utils.data.download_data("Mouse32-140822.nwb", "https://osf.io/jb2gd/download",
                                          '../data')
-print(path)
 
 # %%
 # ## Pynapple
