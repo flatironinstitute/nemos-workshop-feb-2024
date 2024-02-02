@@ -40,7 +40,7 @@ def convert(path: str, follow_strip_classes=True):
     most_recent_header_chain = [(1, title)]
     output_blocks = [f"# -*- coding: utf-8 -*-\n\"\"\"{match.group(0)}\"\"\""]
     in_note = False
-    for block_type, block_txt, line_no in source_blocks[1:]:
+    for block_type, block_txt, line_no in source_blocks:
         if block_type == 'text':
             block = []
             for line in block_txt.splitlines():
@@ -48,6 +48,9 @@ def convert(path: str, follow_strip_classes=True):
                 if header:
                     header_lvl = len(header.group(1))
                     header_txt = header.group(2).strip()
+                    # skip the highest-level title
+                    if header_txt == title:
+                        continue
                     while header_lvl <= most_recent_header_chain[-1][0]:
                         most_recent_header_chain = most_recent_header_chain[:-1]
                     most_recent_header_chain.append((header_lvl, header_txt))
