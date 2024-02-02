@@ -12,10 +12,8 @@ import pynapple as nap
 
 TsdType = Union[nap.Tsd, nap.TsdFrame, nap.TsdTensor]
 
-DATA_DIR = op.join(op.dirname(op.realpath(__file__)), '..', 'data')
-
-def download_data(filename, url):
-    filename = op.join(DATA_DIR, filename)
+def download_data(filename, url, data_dir):
+    filename = op.join(data_dir, filename)
     if not os.path.exists(filename):
         r = requests.get(url, stream=True)
         block_size = 1024*1024
@@ -67,10 +65,14 @@ def fill_forward(time_series, data, ep=None, out_of_range=np.nan):
 
 
 @click.command()
-def main():
-    download_data("allen_478498617.nwb", "https://osf.io/vf2nj/download")
-    download_data("m691l1.nwb", "https://osf.io/xesdm/download")
-    download_data("Mouse32-140822.nwb", "https://osf.io/jb2gd/download")
+@click.argument('data_dir')
+def main(data_dir):
+    download_data("allen_478498617.nwb", "https://osf.io/vf2nj/download",
+                  data_dir)
+    download_data("m691l1.nwb", "https://osf.io/xesdm/download",
+                  data_dir)
+    download_data("Mouse32-140822.nwb", "https://osf.io/jb2gd/download",
+                  data_dir)
 
 
 if __name__ == '__main__':

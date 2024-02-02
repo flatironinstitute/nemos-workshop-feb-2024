@@ -31,7 +31,8 @@ plt.style.use(workshop_utils.STYLE_FILE)
 # Here we load the data from OSF. This data comes from Sonica Saraf, in Tony
 # Movshon's lab.
 
-path = workshop_utils.data.download_data("m691l1.nwb", "https://osf.io/xesdm/download")
+path = workshop_utils.data.download_data("m691l1.nwb", "https://osf.io/xesdm/download",
+                                         '../data')
 
 
 # %%

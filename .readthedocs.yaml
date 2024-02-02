@@ -15,7 +15,8 @@ build:
     pre_build:
       - python scripts/strip_text.py
       # download data first, so we don't have a race for each notebook
-      - python src/workshop_utils/data.py
+      - mkdir -p docs/data
+      - python src/workshop_utils/data.py docs/data
   apt_packages:
     - ffmpeg
 

@@ -88,7 +88,8 @@ jax.config.update("jax_enable_x64", True)
 # - Stream the data. Format is [Neurodata Without Borders (NWB) standard](https://nwb-overview.readthedocs.io/en/latest/)
 # </div>
 
-path = workshop_utils.data.download_data("allen_478498617.nwb", "https://osf.io/vf2nj/download")
+path = workshop_utils.data.download_data("allen_478498617.nwb", "https://osf.io/vf2nj/download",
+                                         '../data')
 
 # %%
 # ## Pynapple
