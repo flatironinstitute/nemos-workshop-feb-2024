@@ -1,0 +1,9 @@
+#!/bin/bash
+
+conda activate nemos
+cd nemos-workshop-feb-2024/
+mkdocs build
+cd ..
+mkdir notebooks/
+cp -r docs/generated/for_users/ notebooks/
+cd notebooks/
