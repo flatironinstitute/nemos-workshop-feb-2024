@@ -1,7 +1,6 @@
 # # -*- coding: utf-8 -*-
 #
-"""
-# Fit V1 cell
+"""# Fit V1 cell
 
 ## Learning objectives
 
@@ -28,7 +27,7 @@ plt.style.use('../utils/nemos.mplstyle')
 jax.config.update("jax_enable_x64", True)
 
 # %%
-# ## DATA STREAMING
+# ## Data Streaming
 #
 # Here we load the data from OSF. This data comes from Sonica Saraf, in Tony
 # Movshon's lab.
@@ -37,7 +36,7 @@ path = utils.data.download_data("m691l1.nwb", "https://osf.io/xesdm/download")
 
 
 # %%
-# ## PYNAPPLE
+# ## Pynapple
 # The data have been copied to your local station.
 # We are gonna open the NWB file with pynapple
 
@@ -61,7 +60,7 @@ stimulus = data["whitenoise"]
 #     V1 simple cells
 # </div>
 fig, ax = plt.subplots(1, 1, figsize=(12,4))
-ax.imshow(stimulus[0])
+ax.imshow(stimulus[0], cmap='Greys_r')
 stimulus.shape
 
 # %%
@@ -101,6 +100,8 @@ spikes = spikes[[34]]
 # using spike-triggered average, and then we'll use the GLM to fit the temporal
 # timecourse.
 #
+# ## Spike-triggered average
+#
 # Spike-triggered average says: every time our neuron spikes, we store the
 # stimulus that was on the screen. for the whole recording, we'll have many of
 # these, which we then average to get this STA, which is the "optimal stimulus"
@@ -127,7 +128,8 @@ sta[1, 0]
 # we can easily plot this
 fig, axes = plt.subplots(1, len(sta), figsize=(3*len(sta),3))
 for i, t in enumerate(sta.t):
-    axes[i].imshow(sta[i,0], vmin = np.min(sta), vmax = np.max(sta))
+    axes[i].imshow(sta[i,0], vmin = np.min(sta), vmax = np.max(sta),
+                   cmap='Greys_r')
     axes[i].set_title(str(t)+" s")
 
 
@@ -141,7 +143,7 @@ for i, t in enumerate(sta.t):
 receptive_field = np.mean(sta.get(-0.125, -0.05), axis=0)[0]
 
 fig, ax = plt.subplots(1, 1, figsize=(4,4))
-ax.imshow(receptive_field)
+ax.imshow(receptive_field, cmap='Greys_r')
 
 # %%
 #
@@ -185,9 +187,12 @@ ax.plot(filtered_stimulus)
 # neuron, based on the receptive field we fit using the spike-triggered
 # average.
 #
-# This, then, is the spatial component of our input, as described above. We'll
-# now use the GLM to fit the temporal component. To do that, let's get this and
-# our spike counts into the proper format for nemos:
+# This, then, is the spatial component of our input, as described above.
+#
+# ## Preparing data for nemos
+#
+# We'll now use the GLM to fit the temporal component. To do that, let's get
+# this and our spike counts into the proper format for nemos:
 
 # grab spikes from when we were showing our stimulus, and bin at 1 msec
 # resolution
@@ -242,6 +247,8 @@ counts = counts[:, 0]
 
 # %%
 #
+# ## Fitting the GLM
+#
 # Now we're ready to fit the model! Let's do it, same as before:
 model = utils.model.GLM(regularizer=nmo.regularizer.UnRegularized(solver_name="LBFGS"))
 model.fit(convolved_input, counts)
@@ -256,8 +263,23 @@ plt.plot(time, temp_weights)
 
 # %%
 #
-# Now what else to do:
-# - split into test and train
+# When taken together, the results of the GLM and the spike-triggered average
+# give us the linear component of our LNP model: the separable spatio-temporal
+# filter.
 #
-# - then examine: other choices for that spatial receptive field, changing
-#   basis parameters, regularization on temporal time course
+# ## Further exercises
+#
+# There's more that could (and should) be done here. First, we should probably
+# split our data into separate test and train sets, to see how consistent our
+# estimates of the spatial and temporal filters are. Then, using the test and
+# train sets, we can:
+#
+# - try different choices for the spatial receptive field: modify the
+#   parameters of the STA, pick one of the time bins directly (instead of
+#   averaging), lowpass filter the receptive field (to remove the high
+#   frequency noise), manually create or fit a Gabor to match the STA results.
+#
+# - try different choices for the temporal filter: change basis functions,
+#   change the parameters of the basis object.
+#
+# - try adding regularization to the GLM for fitting the temporal filter.
