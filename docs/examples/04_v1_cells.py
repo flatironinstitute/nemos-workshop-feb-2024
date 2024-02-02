@@ -100,7 +100,7 @@ spikes = spikes[[34]]
 # using spike-triggered average, and then we'll use the GLM to fit the temporal
 # timecourse.
 #
-# ## Spike-triggered average
+# ## Spike-triggered average {.strip-code}
 #
 # Spike-triggered average says: every time our neuron spikes, we store the
 # stimulus that was on the screen. for the whole recording, we'll have many of
@@ -201,7 +201,7 @@ ax.plot(filtered_stimulus)
 #
 # This, then, is the spatial component of our input, as described above.
 #
-# ## Preparing data for nemos
+# ## Preparing data for nemos {.strip-code}
 #
 # We'll now use the GLM to fit the temporal component. To do that, let's get
 # this and our spike counts into the proper format for nemos:
@@ -267,7 +267,7 @@ counts = counts[:, 0]
 
 # %%
 #
-# ## Fitting the GLM
+# ## Fitting the GLM {.strip-code}
 #
 # Now we're ready to fit the model! Let's do it, same as before:
 #
