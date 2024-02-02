@@ -154,15 +154,21 @@ print(position_basis.shape)
 fig = plt.figure(figsize = (12, 4))
 gs = plt.GridSpec(2, 5)
 xt = np.arange(0, 1000, 200)
-for i in xt:
-    ax = plt.subplot(gs[0,i//200])
+cmap = plt.get_cmap("rainbow")
+colors = np.linspace(0,1, len(xt))
+for cnt, i in enumerate(xt):
+    ax = plt.subplot(gs[0, i // 200])
     ax.imshow(position_basis[i].reshape(10, 10).T, origin = 'lower')
+    for spine in ["top", "bottom", "left","right"]:
+        ax.spines[spine].set_color(cmap(colors[cnt]))
+        ax.spines[spine].set_linewidth(3)
     plt.title("T "+str(i))
 
-ax = plt.subplot(gs[1,2])
+ax = plt.subplot(gs[1, 2])
 
 ax.plot(position['x'][0:1000], position['y'][0:1000])
-ax.plot(position['x'][xt], position['y'][xt], 'o', color = 'red')
+for i in range(len(xt)):
+    ax.plot(position['x'][xt[i]], position['y'][xt[i]], 'o', color = cmap(colors[i]))
 
 plt.tight_layout()
 
@@ -207,13 +213,12 @@ model_tuning, binsxy = nap.compute_2d_tuning_curves_continuous(
 fig = plt.figure(figsize = (12, 4))
 gs = plt.GridSpec(2, len(spikes))
 for i in range(len(spikes)):
-    ax = plt.subplot(gs[0,i])
+    ax = plt.subplot(gs[0, i])
     ax.imshow(gaussian_filter(pos_tuning[i], sigma=1))
     
-    ax = plt.subplot(gs[1,i])
+    ax = plt.subplot(gs[1, i])
     ax.imshow(model_tuning[i])
 plt.tight_layout()
-
 
 
 # %%
