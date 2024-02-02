@@ -235,6 +235,12 @@ spikes
 #
 # We can index into the `TsGroup` to see the timestamps for this neuron's
 # spikes:
+#
+# <div class="notes">"
+# We can index into the `TsGroup` to see the timestamps for this neuron's
+# spikes:
+# </div>
+
 spikes[0]
 
 # %%
@@ -242,6 +248,10 @@ spikes[0]
 # Similar to `current`, this object originally contains data from the entire
 # experiment. To get only the data we need, we again use
 # `restrict(noise_interval)`:
+#
+# <div class="notes">"
+# Let's restrict to the same epoch `noise_interval`:
+# </div>
 
 spikes = spikes.restrict(noise_interval)
 print(spikes)
@@ -252,6 +262,10 @@ spikes[0]
 #
 # Now, let's visualize the data from this trial, replicating rows 1 and 3
 # from the Allen Brain Atlas figure at the beginning of this notebook:
+#
+# <div class="notes">"
+# Let's visualize the data from this trial:
+# </div>
 
 fig, ax = plt.subplots(1, 1, figsize=(8, 2))
 ax.plot(current, "grey")
@@ -306,6 +320,13 @@ ax.set_xlabel("Time (s)")
 # interesting and would like a model to capture.
 #
 # First, we must convert from our spike times to binned spikes:
+#
+# <div class="notes">"
+# The Generalized Linear Model gives a predicted firing rate. First we can use
+# pynapple to visualize this firing rate for a single trial.
+# 
+# - `count` : count the number of events within `bin_size`
+# </div>
 
 # bin size in seconds
 bin_size = 0.001
@@ -317,6 +338,11 @@ count
 # Now, let's convert the binned spikes into the firing rate, by smoothing them
 # with a gaussian kernel. Pynapple again provides a convenience function for
 # this:
+# <div class="notes">"
+# Let's convert the spike counts to firing rate :
+# 
+# - `smooth` : convolve with a Gaussian kernel
+# </div>
 
 # the inputs to this function are the standard deviation of the gaussian and
 # the full width of the window, given in bins. So std=50 corresponds to a
@@ -329,6 +355,11 @@ firing_rate = firing_rate / bin_size
 #
 # Note that this changes the object's type to a
 # [`TsdFrame`](https://pynapple-org.github.io/pynapple/reference/core/time_series/)!
+#
+# <div class="notes">"
+# Note that firing_rate is a [`TsdFrame`](https://pynapple-org.github.io/pynapple/reference/core/time_series/)!
+# 
+# </div>
 print(type(firing_rate))
 
 # %%
@@ -370,6 +401,11 @@ workshop_utils.plotting.current_injection_plot(current, spikes, firing_rate)
 # Pynapple can compute a tuning curve to help us answer this question, by
 # binning our spikes based on the instantaneous input current and computing the
 # firing rate within those bins:
+#
+# <div class="notes">"
+# What is the relationship between the current and the spiking activity?
+# [`compute_1d_tuning_curves`](https://pynapple-org.github.io/pynapple/reference/process/tuning_curves/#pynapple.process.tuning_curves.compute_1d_tuning_curves) : compute the firing rate as a function of a 1-dimensional feature.
+# </div>
 
 tuning_curve = nap.compute_1d_tuning_curves(spikes, current, nb_bins=15)
 tuning_curve
@@ -379,6 +415,11 @@ tuning_curve
 # `tuning_curve` is a pandas DataFrame where each column is a neuron (one
 # neuron in this case) and each row is a bin over the feature (here, the input
 # current). We can easily plot the tuning curve of the neuron:
+#
+# <div class="notes">"
+# Let's plot the tuning curve of the neuron.
+# </div>
+
 
 workshop_utils.plotting.tuning_curve_plot(tuning_curve)
 
