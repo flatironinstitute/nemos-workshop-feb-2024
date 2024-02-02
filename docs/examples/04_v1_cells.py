@@ -91,7 +91,7 @@ spikes = spikes[[34]]
 #   wouldn't catch e.g., direction-selectivity because it assumes that phase
 #   preference is constant over time
 #
-# - could mkae use of our knowledge of V1 and try to fit a more complex
+# - could make use of our knowledge of V1 and try to fit a more complex
 #   functional form, e.g., a Gabor.
 #
 # That last one is very non-linear and thus non-convex. we'll do the third one.
@@ -110,6 +110,10 @@ spikes = spikes[[34]]
 # In practice, we do not just the stimulus on screen, but in some window of
 # time around it. (it takes some time for info to travel through the eye/LGN to
 # V1). Pynapple makes this easy:
+#
+# <div class="notes">
+#   - compute spike-triggered average to visualize receptive field.
+# </div>
 
 sta = nap.compute_event_trigger_average(spikes, stimulus, binsize=0.025,
                                         windowsize=(-0.15, 0.0))
@@ -126,6 +130,10 @@ sta[1, 0]
 
 # %%
 # we can easily plot this
+#
+# <div class="notes">
+#   - visualize spike-triggered average and decide on our spatial filter.
+# </div>
 fig, axes = plt.subplots(1, len(sta), figsize=(3*len(sta),3))
 for i, t in enumerate(sta.t):
     axes[i].imshow(sta[i,0], vmin = np.min(sta), vmax = np.max(sta),
@@ -150,6 +158,10 @@ ax.imshow(receptive_field, cmap='Greys_r')
 # This receptive field gives us the spatial part of the linear response: it
 # gives a map of weights that we use for a weighted sum on an image. There are
 # multiple ways of performing this operation:
+#
+# <div class="notes">
+#   - use the spike-triggered average to preprocess our visual input.
+# </div>
 
 # element-wise multiplication and sum
 print((receptive_field * stimulus[0]).sum())
@@ -193,6 +205,10 @@ ax.plot(filtered_stimulus)
 #
 # We'll now use the GLM to fit the temporal component. To do that, let's get
 # this and our spike counts into the proper format for nemos:
+#
+# <div class="notes">
+#   - get `counts` and `filtered_stimulus` into proper shape for nemos
+# </div>
 
 # grab spikes from when we were showing our stimulus, and bin at 1 msec
 # resolution
@@ -228,6 +244,10 @@ filtered_stimulus
 # Now, similar to the [head direction tutorial](../02_head_direction), we'll
 # use the log-stretched raised cosine basis to create the predictor for our
 # GLM:
+#
+# <div class="notes">
+#   - Set up the basis and prepare the temporal predictor for the GLM.
+# </div>
 basis = nmo.basis.RaisedCosineBasisLog(8)
 window_size = 100
 time, basis_kernels = basis.evaluate_on_grid(window_size)
@@ -250,6 +270,10 @@ counts = counts[:, 0]
 # ## Fitting the GLM
 #
 # Now we're ready to fit the model! Let's do it, same as before:
+#
+# <div class="notes">
+#   - Fit the GLM
+# </div>
 model = utils.model.GLM(regularizer=nmo.regularizer.UnRegularized(solver_name="LBFGS"))
 model.fit(convolved_input, counts)
 
@@ -257,6 +281,10 @@ model.fit(convolved_input, counts)
 #
 # We have our coefficients for each of our 8 basis functions, let's combine
 # them to get the temporal time course of our input:
+#
+# <div class="notes">
+#   - Examine the resulting temporal filter
+# </div>
 
 temp_weights = np.einsum('b, t b -> t', model.coef_, basis_kernels)
 plt.plot(time, temp_weights)
