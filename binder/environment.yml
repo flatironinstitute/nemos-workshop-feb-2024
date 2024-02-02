@@ -1,10 +1,15 @@
 name: nemos
 channels:
   - conda-forge
+  - nvidia
 dependencies:
   - ffmpeg
   - pip
+  - cudatoolkit
+  - cudnn
   - python=3.10
+  - cuda-python
+  - jax
+  - cuda-nvcc
   - pip:
-      - jax[cuda12_pip] -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
       - git+https://github.com/flatironinstitute/nemos-workshop-feb-2024.git@binder

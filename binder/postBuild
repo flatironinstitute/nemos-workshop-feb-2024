@@ -3,8 +3,8 @@
 conda activate nemos
 cd nemos-workshop-feb-2024/
 python scripts/strip_text.py
+python src/workshop_utils/data.py ../data/
 mkdocs build
 cd ..
-mkdir notebooks/
-cp -r docs/generated/for_users/ notebooks/
-cd notebooks/
+mkdir -p notebooks/
+cp nemos-workshop-feb-2024/site/generated/for_users/*ipynb notebooks/
