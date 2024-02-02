@@ -10,8 +10,9 @@ For this workshop, we're using the [Flatiron
 Binder](https://wiki.flatironinstitute.org/SCC/BinderHub). To set that up,
 someone with Flatiron cluster access must:
 
-1. Create a repository in `~/public_binder/nemos` (the last directory will be
-   the name of the environment).
+1. Create a directory at `~/public_binder/nemos` (the last directory will be the
+   name of the environment).
+2. Create a `data/` folder within that directory.
 2. Create a `.public_binder` file with the following contents (this is a yaml file):
    ```
    gpu: true
