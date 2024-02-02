@@ -11,15 +11,14 @@
 
 """
 
-import math
-import os
+import sys
 
 import jax
 import matplotlib.pyplot as plt
 import nemos as nmo
 import numpy as np
 import pynapple as nap
-import sys
+
 sys.path.append('..')
 import utils
 

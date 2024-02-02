@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
 
-import matplotlib.pyplot as plt
-from numpy.typing import NDArray
-from matplotlib.animation import FuncAnimation
-import numpy as np
-import jax
-import pynapple as nap
-import pandas as pd
-import matplotlib as mpl
 from typing import Optional
-from IPython.display import HTML
+
+import jax
+import matplotlib as mpl
+import matplotlib.pyplot as plt
 import nemos as nmo
+import numpy as np
+import pandas as pd
+import pynapple as nap
+from IPython.display import HTML
+from matplotlib.animation import FuncAnimation
+from numpy.typing import NDArray
 
 
 def tuning_curve_plot(tuning_curve: pd.DataFrame):
