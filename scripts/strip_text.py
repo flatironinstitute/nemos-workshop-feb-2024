@@ -56,7 +56,7 @@ def convert(path: str, follow_strip_classes=True):
                     most_recent_header_chain.append((header_lvl, header_txt))
                     # strip headers beneath this one, not including it
                     if not any(['.strip-headers' in h[1] for h in most_recent_header_chain[:-1]]) or not follow_strip_classes:
-                        block.append(header.group(0).strip())
+                        block.append(header.group(0).split('{')[0].strip())
                 else:
                     if any(['.keep-text' in h[1] for h in most_recent_header_chain]):
                         block.append(line)
