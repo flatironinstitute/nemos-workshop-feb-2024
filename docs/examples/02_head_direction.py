@@ -11,22 +11,19 @@
 
 """
 
-import sys
-
 import jax
 import matplotlib.pyplot as plt
 import nemos as nmo
 import numpy as np
 import pynapple as nap
 
-sys.path.append('..')
-import utils
+import workshop_utils
 
 # Set the default precision to float64, which is generally a good idea for
 # optimization purposes.
 jax.config.update("jax_enable_x64", True)
 # configure plots some
-plt.style.use('../utils/nemos.mplstyle')
+plt.style.use(workshop_utils.STYLE_FILE)
 
 # %%
 # ## Data Streaming
@@ -35,7 +32,7 @@ plt.style.use('../utils/nemos.mplstyle')
 # blblalba say more
 # Just run this cell
 
-path = utils.data.download_data("Mouse32-140822.nwb", "https://osf.io/jb2gd/download")
+path = workshop_utils.data.download_data("Mouse32-140822.nwb", "https://osf.io/jb2gd/download")
 
 # %%
 # ## Pynapple
@@ -95,7 +92,7 @@ plt.tight_layout()
 # Before using Nemos, let's explore the data at the population level.
 
 # Let's plot the preferred heading
-fig = utils.plotting.plot_head_direction_tuning(
+fig = workshop_utils.plotting.plot_head_direction_tuning(
     tuning_curves, spikes, angle, threshold_hz=1, start=8910, end=8960
 )
 
@@ -161,7 +158,7 @@ plt.tight_layout()
 # set the size of the spike history window in seconds
 window_size_sec = 0.8
 
-utils.plotting.plot_history_window(neuron_count, epoch_one_spk, window_size_sec)
+workshop_utils.plotting.plot_history_window(neuron_count, epoch_one_spk, window_size_sec)
 
 
 # %%
@@ -169,7 +166,7 @@ utils.plotting.plot_history_window(neuron_count, epoch_one_spk, window_size_sec)
 # Each row of the matrix will be used as the predictors for the rate in the next bin (red narrow rectangle in
 # the figure).
 
-utils.plotting.run_animation(neuron_count, float(epoch_one_spk.start))
+workshop_utils.plotting.run_animation(neuron_count, float(epoch_one_spk.start))
 
 # %%
 # If $t$ is smaller than the window size, we won't have a full window of spike history for estimating the rate.
@@ -216,7 +213,7 @@ print(f"Convolution window size in bins: {window_size}")
 
 suptitle = "Input feature: Count History"
 neuron_id = 0
-utils.plotting.plot_features(input_feature, count.rate, suptitle)
+workshop_utils.plotting.plot_features(input_feature, count.rate, suptitle)
 
 # %%
 # As you may see, the time axis is backward, this happens because convolution flips the time axis.
@@ -249,7 +246,7 @@ second_half = nap.IntervalSet(start + duration / 2, end)
 # Fit the glm to the training set.
 
 # define the GLM object
-model = utils.model.GLM(regularizer=nmo.regularizer.UnRegularized("LBFGS"))
+model = workshop_utils.model.GLM(regularizer=nmo.regularizer.UnRegularized("LBFGS"))
 
 # predict ML paramametrs. Crop the first window_size (1 sec)
 # because we don't have the full count history to predict
@@ -274,7 +271,7 @@ plt.legend()
 
 # fit on the test set
 
-model_second_half = utils.model.GLM(regularizer=nmo.regularizer.UnRegularized("LBFGS"))
+model_second_half = workshop_utils.model.GLM(regularizer=nmo.regularizer.UnRegularized("LBFGS"))
 model_second_half.fit(input_feature.restrict(second_half), neuron_count.restrict(second_half))
 
 plt.figure()
@@ -315,7 +312,7 @@ plt.legend()
 # in neuroscience: whether an input happened 1 or 5 msec ago matters a lot,
 # whereas whether an input happened 51 or 55 msec ago is less important.
 
-utils.plotting.plot_basis()
+workshop_utils.plotting.plot_basis()
 
 # %%
 # !!! info
@@ -355,7 +352,7 @@ time *= window_size_sec
 lsq_coef, _, _, _ = np.linalg.lstsq(basis_kernels, model.coef_, rcond=-1)
 
 # plot the basis and the approximation
-utils.plotting.plot_weighted_sum_basis(time, model.coef_, basis_kernels, lsq_coef)
+workshop_utils.plotting.plot_weighted_sum_basis(time, model.coef_, basis_kernels, lsq_coef)
 
 # %%
 #
@@ -393,7 +390,7 @@ print(f"Compressed count history as feature: {conv_spk.shape}")
 epoch_one_spk = nap.IntervalSet(8917.5, 8918.5)
 epoch_multi_spk = nap.IntervalSet(8979.2, 8980.2)
 
-utils.plotting.plot_convolved_counts(neuron_count, conv_spk, epoch_one_spk, epoch_multi_spk)
+workshop_utils.plotting.plot_convolved_counts(neuron_count, conv_spk, epoch_one_spk, epoch_multi_spk)
 
 # find interval with two spikes to show the accumulation, in a second row
 
@@ -401,7 +398,7 @@ utils.plotting.plot_convolved_counts(neuron_count, conv_spk, epoch_one_spk, epoc
 # Now that we have our "compressed" history feature matrix, we can fit the ML parameters for a GLM.
 
 # use restrict on interval set training
-model_basis = utils.model.GLM(regularizer=nmo.regularizer.UnRegularized("LBFGS"))
+model_basis = workshop_utils.model.GLM(regularizer=nmo.regularizer.UnRegularized("LBFGS"))
 model_basis.fit(conv_spk.restrict(first_half), neuron_count.restrict(first_half))
 
 # %%
@@ -434,7 +431,7 @@ plt.legend()
 # Let's check if our new estimate does a better job in terms of over-fitting. We can do that
 # by visual comparison, as we did previously.
 
-model_basis_second_half = utils.model.GLM(regularizer=nmo.regularizer.UnRegularized("LBFGS"))
+model_basis_second_half = workshop_utils.model.GLM(regularizer=nmo.regularizer.UnRegularized("LBFGS"))
 model_basis_second_half.fit(conv_spk.restrict(second_half), neuron_count.restrict(second_half))
 
 # compute responses for the 2nd half fit
@@ -475,7 +472,7 @@ rate_history = nap.Tsd(t=conv_spk.t, d=np.asarray(model.predict(input_feature)))
 ep = nap.IntervalSet(start=8819.4, end=8821)
 
 # plot the rates
-utils.plotting.plot_rates_and_smoothed_counts(
+workshop_utils.plotting.plot_rates_and_smoothed_counts(
     neuron_count,
     {"Self-connection raw history":rate_history, "Self-connection bsais": rate_basis}
 )
@@ -518,7 +515,7 @@ models = []
 for neu in range(count.shape[1]):
     print(f"fitting neuron {neu}...")
     count_neu = count[:, neu]
-    model = utils.model.GLM(
+    model = workshop_utils.model.GLM(
         regularizer=nmo.regularizer.Ridge(regularizer_strength=0.1, solver_name="LBFGS")
     )
     # models.append(model.fit(convolved_count.restrict(train_epoch), count_neu.restrict(train_epoch)))
@@ -549,12 +546,12 @@ predicted_firing_rate = nap.TsdFrame(t=count[window_size:].t, d=predicted_firing
 # Plot fit predictions over a short window not used for training.
 
 # use pynapple for time axis for all variables plotted for tick labels in imshow
-utils.plotting.plot_head_direction_tuning_model(tuning_curves, predicted_firing_rate, spikes, angle, threshold_hz=1,
+workshop_utils.plotting.plot_head_direction_tuning_model(tuning_curves, predicted_firing_rate, spikes, angle, threshold_hz=1,
                                                 start=8910, end=8960, cmap_label="hsv")
 # %%
 # Let's see if our firing rate predictions improved and in what sense.
 
-utils.plotting.plot_rates_and_smoothed_counts(
+workshop_utils.plotting.plot_rates_and_smoothed_counts(
     neuron_count,
     {"Self-connection: raw history": rate_history,
      "Self-connection: bsais": rate_basis,
@@ -581,7 +578,7 @@ tuning = nap.compute_1d_tuning_curves_continuous(predicted_firing_rate,
 # Finally, we can visualize the pairwise interactions by plotting
 # all the coupling filters.
 
-utils.plotting.plot_coupling(responses, tuning)
+workshop_utils.plotting.plot_coupling(responses, tuning)
 
 
 # %%

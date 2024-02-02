@@ -52,12 +52,10 @@ import nemos as nmo
 import nemos.glm
 import numpy as np
 import pynapple as nap
-import sys
-sys.path.append('..')
-import utils
+import workshop_utils
 
 # configure plots some
-plt.style.use('../utils/nemos.mplstyle')
+plt.style.use(workshop_utils.STYLE_FILE)
 
 # Set the default precision to float64, which is generally a good idea for
 # optimization purposes.
@@ -90,7 +88,7 @@ jax.config.update("jax_enable_x64", True)
 # - Stream the data. Format is [Neurodata Without Borders (NWB) standard](https://nwb-overview.readthedocs.io/en/latest/)
 # </div>
 
-path = utils.data.download_data("allen_478498617.nwb", "https://osf.io/vf2nj/download")
+path = workshop_utils.data.download_data("allen_478498617.nwb", "https://osf.io/vf2nj/download")
 
 # %%
 # ## Pynapple
@@ -341,8 +339,8 @@ print(type(firing_rate))
 # we're hiding the details of the plotting function for the purposes of this
 # tutorial, but you can find it in the associated github repo if you're
 # interested:
-# https://github.com/flatironinstitute/nemos-workshop-feb-2024/blob/main/docs/examples/utils/plotting.py
-utils.plotting.current_injection_plot(current, spikes, firing_rate)
+# https://github.com/flatironinstitute/nemos-workshop-feb-2024/blob/binder/src/workshop_utils/plotting.py
+workshop_utils.plotting.current_injection_plot(current, spikes, firing_rate)
 
 # %%
 #
@@ -382,7 +380,7 @@ tuning_curve
 # neuron in this case) and each row is a bin over the feature (here, the input
 # current). We can easily plot the tuning curve of the neuron:
 
-utils.plotting.tuning_curve_plot(tuning_curve)
+workshop_utils.plotting.tuning_curve_plot(tuning_curve)
 
 # %%
 #
@@ -562,7 +560,7 @@ count = jax.numpy.asarray(count.values)
 #   - GLM objects need regularizers and observation models
 # </div>
 
-model = utils.model.GLM(regularizer=nmo.regularizer.UnRegularized(solver_name="LBFGS"))
+model = workshop_utils.model.GLM(regularizer=nmo.regularizer.UnRegularized(solver_name="LBFGS"))
 
 # %%
 #
@@ -621,7 +619,7 @@ predicted_fr = nap.TsdFrame(t=binned_current.t, d=np.asarray(predicted_fr))
 smooth_predicted_fr = predicted_fr.smooth(50, 1000)
 
 # and plot!
-utils.plotting.current_injection_plot(current, spikes, firing_rate,
+workshop_utils.plotting.current_injection_plot(current, spikes, firing_rate,
                                       # plot the predicted firing rate that has
                                       # been smoothed the same way as the
                                       # smoothed spike train
@@ -675,7 +673,7 @@ print(f"Predicted mean firing rate: {np.mean(predicted_fr)} Hz")
 # </div>
 
 tuning_curve_model = nap.compute_1d_tuning_curves_continuous(predicted_fr, current, 15)
-fig = utils.plotting.tuning_curve_plot(tuning_curve)
+fig = workshop_utils.plotting.tuning_curve_plot(tuning_curve)
 fig.axes[0].plot(tuning_curve_model, color="tomato", label="glm")
 fig.axes[0].legend()
 

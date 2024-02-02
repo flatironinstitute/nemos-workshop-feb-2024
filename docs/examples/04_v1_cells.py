@@ -15,12 +15,12 @@ import numpy as np
 import pynapple as nap
 import requests
 import tqdm
-import sys
-sys.path.append('..')
-import utils
+import workshop_utils
 
 # required for second order methods (BFGS, Newton-CG)
 jax.config.update("jax_enable_x64", True)
+# configure plots some
+plt.style.use(workshop_utils.STYLE_FILE)
 
 # %%
 # ## DATA STREAMING
@@ -30,7 +30,7 @@ jax.config.update("jax_enable_x64", True)
 # blblalba say more
 # Just run this cell
 
-path = utils.data.download_data("m691l1.nwb", "https://osf.io/xesdm/download")
+path = workshop_utils.data.download_data("m691l1.nwb", "https://osf.io/xesdm/download")
 
 
 # %%
