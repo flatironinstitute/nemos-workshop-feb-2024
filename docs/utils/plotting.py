@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 
-import matplotlib.pyplot as plt
-from numpy.typing import NDArray
-from matplotlib.animation import FuncAnimation
-import numpy as np
-import jax
-import pynapple as nap
-import pandas as pd
-import matplotlib as mpl
 from typing import Optional
 
+import jax
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+import nemos as nmo
+import numpy as np
+import pandas as pd
+import pynapple as nap
+from IPython.display import HTML
+from matplotlib.animation import FuncAnimation
+from numpy.typing import NDArray
 
 
 def tuning_curve_plot(tuning_curve: pd.DataFrame):
@@ -450,8 +452,8 @@ def plot_count_history_window(
 def plot_features(
         input_feature: NDArray,
         sampling_rate: float,
-        n_rows: int,
-        suptitle:str
+        suptitle:str,
+        n_rows: int = 20
 ):
     """
     Plot feature matrix.
@@ -543,7 +545,7 @@ def plot_weighted_sum_basis(time, weights, basis_kernels, basis_coeff):
     axs[3].plot(time, basis_kernels @ basis_coeff, "--k")
     axs[3].set_xlabel("Time from spike (sec)")
     axs[3].set_ylabel("Weight")
-
+    axs[3].axhline(0, color="k", lw=0.5)
     plt.tight_layout()
     return fig
 
@@ -552,16 +554,16 @@ class PlotSlidingWindow():
     def __init__(
             self,
             counts: nap.Tsd,
-            n_shift: int,
-            history_window: float,
-            bin_size: float,
             start: float,
-            ylim: tuple[float, float],
-            plot_every: int,
-            figsize=tuple[float,float],
-            interval: int = 10,
-            add_before: float = 0.2,
-            add_after: float = 0.2
+            n_shift: int = 20,
+            history_window: float = 0.8,
+            bin_size: float = 0.01,
+            ylim: tuple[float, float] = (0, 3),
+            plot_every: int = 1,
+            figsize: tuple[float, float] = (8, 8),
+            interval: int = 200,
+            add_before: float = 0.,
+            add_after: float = 0.
     ):
         self.counts = counts
         self.n_shift = n_shift
@@ -655,3 +657,175 @@ class PlotSlidingWindow():
         anim = FuncAnimation(self.fig, self.update_fig, self.n_shift, interval=self.interval, repeat=True)
         plt.close(self.fig)
         return anim
+
+
+def run_animation(counts: nap.Tsd, start: float):
+    anim = PlotSlidingWindow(
+        counts,
+        start
+    ).run()
+    return HTML(anim.to_html5_video())
+
+
+def plot_coupling(responses, tuning, cmap_name="seismic",
+                      figsize=(10, 8), fontsize=15, alpha=0.5, cmap_label="hsv"):
+    pref_ang = tuning.idxmax()
+    cmap_tun = plt.get_cmap(cmap_label)
+    color_tun = (pref_ang.values - pref_ang.values.min()) / (pref_ang.values.max() - pref_ang.values.min())
+
+    # plot heatmap
+    sum_resp = np.sum(responses, axis=2)
+    # normalize by cols (for fixed receiver neuron, scale all responses
+    # so that the strongest peaks to 1)
+    sum_resp_n = (sum_resp.T / sum_resp.max(axis=1)).T
+
+    # scale to 0,1
+    color = -0.5 * (sum_resp_n - sum_resp_n.min()) / sum_resp_n.min()
+
+    cmap = plt.get_cmap(cmap_name)
+    n_row, n_col, n_tp = responses.shape
+    time = np.arange(n_tp)
+    fig, axs = plt.subplots(n_row + 1, n_col + 1, figsize=figsize, sharey="row")
+    for rec, rec_resp in enumerate(responses):
+        for send, resp in enumerate(rec_resp):
+            axs[rec, send].plot(time, responses[rec, send], color="k")
+            axs[rec, send].spines["left"].set_visible(False)
+            axs[rec, send].spines["bottom"].set_visible(False)
+            axs[rec, send].set_xticks([])
+            axs[rec, send].set_yticks([])
+            axs[rec, send].axhline(0, color="k", lw=0.5)
+            if rec == n_row - 1:
+                axs[n_row, send].remove()  # Remove the original axis
+                axs[n_row, send] = fig.add_subplot(n_row, n_col, n_row * (n_col-1) + send + 1,
+                                                      polar=True)  # Add new polar axis
+
+                axs[n_row, send].fill_between(
+                    tuning.iloc[:, send].index,
+                    np.zeros(len(tuning)),
+                    tuning.iloc[:, send].values,
+                    color=cmap_tun(color_tun[send]),
+                    alpha=0.5,
+                )
+                axs[n_row, send].set_xticks([])
+                axs[n_row, send].set_yticks([])
+
+        axs[rec, send + 1].remove()  # Remove the original axis
+        axs[rec, send + 1] = fig.add_subplot(n_row, n_col, rec * n_col + send + 1, polar=True)  # Add new polar axis
+
+        axs[rec, send + 1].fill_between(
+            tuning.iloc[:, rec].index,
+            np.zeros(len(tuning)),
+            tuning.iloc[:, rec].values,
+            color=cmap_tun(color_tun[rec]),
+            alpha=0.5,
+        )
+        axs[rec, send + 1].set_xticks([])
+        axs[rec, send + 1].set_yticks([])
+    axs[rec + 1, send + 1].set_xticks([])
+    axs[rec + 1, send + 1].set_yticks([])
+    axs[rec + 1, send + 1].spines["left"].set_visible(False)
+    axs[rec + 1, send + 1].spines["bottom"].set_visible(False)
+    for rec, rec_resp in enumerate(responses):
+        for send, resp in enumerate(rec_resp):
+            xlim = axs[rec, send].get_xlim()
+            ylim = axs[rec, send].get_ylim()
+            rect = plt.Rectangle(
+                (xlim[0], ylim[0]),
+                xlim[1] - xlim[0],
+                ylim[1] - ylim[0],
+                alpha=alpha,
+                color=cmap(color[rec, send]),
+                zorder=1
+            )
+            axs[rec, send].add_patch(rect)
+            axs[rec, send].set_xlim(xlim)
+            axs[rec, send].set_ylim(ylim)
+    axs[n_row // 2, 0].set_ylabel("receiver\n", fontsize=fontsize)
+    axs[n_row, n_col // 2].set_xlabel("\nsender", fontsize=fontsize)
+
+    plt.suptitle("Pairwise Interaction", fontsize=fontsize)
+    return fig
+
+def plot_history_window(neuron_count, interval, window_size_sec):
+    bin_size = 1 / neuron_count.rate
+    # define the count history window used for prediction
+    history_interval = nap.IntervalSet(
+        start=interval["start"][0], end=window_size_sec + interval["start"][0] - 0.001
+    )
+
+    # define the observed counts bin (the bin right after the history window)
+    observed_count_interval = nap.IntervalSet(
+        start=history_interval["end"], end=history_interval["end"] + bin_size
+    )
+
+    fig, _ = plt.subplots(1, 1, figsize=(8, 3.5))
+    plt.step(
+        neuron_count.restrict(interval).t, neuron_count.restrict(interval).d, where="post"
+    )
+    ylim = plt.ylim()
+    plt.axvspan(
+        history_interval["start"][0],
+        history_interval["end"][0],
+        *ylim,
+        alpha=0.4,
+        color="orange",
+        label="history",
+    )
+    plt.axvspan(
+        observed_count_interval["start"][0],
+        observed_count_interval["end"][0],
+        *ylim,
+        alpha=0.4,
+        color="tomato",
+        label="predicted",
+    )
+    plt.ylim(ylim)
+    plt.title("Spike Count Time Series")
+    plt.xlabel("Time (sec)")
+    plt.ylabel("Counts")
+    plt.legend()
+    plt.tight_layout()
+    return fig
+
+
+def plot_convolved_counts(counts, conv_spk, *epochs, figsize=(6.5, 4.5)):
+    n_rows = len(epochs)
+    fig, axs = plt.subplots(n_rows, 1, sharey="all", figsize=figsize)
+    for row, ep in enumerate(epochs):
+        axs[row].plot(conv_spk.restrict(ep))
+        cnt_ep = counts.restrict(ep)
+        axs[row].vlines(cnt_ep.t[cnt_ep.d > 0], -1, -0.1, "k", lw=2, label="spikes")
+
+        if row == 0:
+            axs[0].set_title("Convolved Counts")
+            axs[0].legend()
+        elif row == n_rows - 1:
+            axs[row].set_xlabel("Time (sec)")
+    return fig
+
+
+def plot_rates_and_smoothed_counts(counts, rate_dict,
+                                   start=8819.4, end=8821, smooth_std=5, smooth_ws=100):
+    ep = nap.IntervalSet(start=start, end=end)
+    fig = plt.figure()
+    for key in  rate_dict:
+        plt.plot(rate_dict[key].restrict(ep), label=key)
+
+    idx_spikes = np.where(counts.restrict(ep).d > 0)[0]
+    plt.vlines(counts.restrict(ep).t[idx_spikes], -8, -1, color="k")
+    plt.plot(counts.smooth(smooth_std, smooth_ws).restrict(ep) * counts.rate, color="k", label="Smoothed spikes")
+    plt.axhline(0, color="k")
+    plt.xlabel("Time (sec)")
+    plt.ylabel("Firing Rate (Hz)")
+    plt.legend()
+    return fig
+
+
+def plot_basis(n_basis_funcs=8, window_size_sec=0.8):
+    fig = plt.figure()
+    basis = nmo.basis.RaisedCosineBasisLog(n_basis_funcs=n_basis_funcs)
+    time, basis_kernels = basis.evaluate_on_grid(1000)
+    time *= window_size_sec
+    plt.plot(time, basis_kernels)
+    plt.xlabel("time (sec)")
+    return fig
