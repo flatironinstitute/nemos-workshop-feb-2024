@@ -7,4 +7,4 @@ dependencies:
   - python=3.10
   - pip:
       - jax[cuda12_pip] -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
-      - git+https://github.com/flatironinstitute/nemos-workshop-feb-2024.git
+      - git+https://github.com/flatironinstitute/nemos-workshop-feb-2024.git@binder

@@ -7,7 +7,7 @@ import math
 import click
 import tqdm.auto as tqdm
 
-DATA_DIR = op.dirname(op.realpath(__file__))
+DATA_DIR = op.join(op.dirname(op.realpath(__file__)), '..', 'data')
 
 def download_data(filename, url):
     filename = op.join(DATA_DIR, filename)
