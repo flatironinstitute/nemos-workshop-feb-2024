@@ -31,9 +31,11 @@ plt.style.use('../utils/nemos.mplstyle')
 # %%
 # ## Data Streaming
 #
-# Here we load the data from OSF. The data is a NWB file.
-# blblalba say more
-# Just run this cell
+# Here we load the data from OSF. The data is a NWB file. 
+# 
+# <div class="notes">
+# - Stream the head-direction neurons data
+# </div>
 
 path = utils.data.download_data("Mouse32-140822.nwb", "https://osf.io/jb2gd/download")
 
@@ -41,46 +43,79 @@ path = utils.data.download_data("Mouse32-140822.nwb", "https://osf.io/jb2gd/down
 # ## Pynapple
 # We are going to open the NWB file with pynapple
 # Since pynapple has been covered in tutorial 0, we are going faster here.
+# 
+# <div class="notes">
+# - `load_file` : open the NWB file and give a preview.
+# </div>
 
 data = nap.load_file(path)
 
 data
 
 # %%
-
+#
 # Get spike timings
+#
+# <div class="notes">
+# - Load the units
+# </div>
+
 spikes = data["units"]
 
 spikes
 
+# %%
+#
 # Get the behavioural epochs (in this case, sleep and wakefulness)
+#
+# <div class="notes">
+# - Load the epochs and take only wakefulness
+# </div>
+
 epochs = data["epochs"]
-# Get the tracked orientation of the animal
-angle = data["ry"]
 wake_ep = data["epochs"]["wake"]
 
 # %%
-# This cell will restrict the data to what we care about i.e. the activity of head-direction neurons during wakefulness.
+# Get the tracked orientation of the animal
+# 
+# <div class="notes">
+# - Load the angular head-direction of the animal (in radians)
+# </div>
 
+angle = data["ry"]
 
 
 # %%
-# Select only those units that are in ADn
+# This cell will restrict the data to what we care about i.e. the activity of head-direction neurons during wakefulness.
+# 
+# <div class="notes">
+# - Select only those units that are in ADn
+# </div>
 
-spikes = spikes.getby_category("location")["adn"].getby_threshold("rate", 1.0)
+spikes = spikes.getby_category("location")["adn"]
+
+# %%
+# 
+# <div class="notes">
+# - Restrict the activity to wakefulness (both the spiking activity and the angle)
+# </div>
+
 spikes = spikes.restrict(wake_ep).getby_threshold("rate", 1.0)
 angle = angle.restrict(wake_ep)
 
+# %%
 # First let's check that they are head-direction neurons.
+#
+# <div class="notes">
+# - Compute tuning curves as a function of head-direction
+# </div>
+
 tuning_curves = nap.compute_1d_tuning_curves(
     group=spikes, feature=angle, nb_bins=61, minmax=(0, 2 * np.pi)
 )
 
-
 # %%
 # Each row indicates an angular bin (in radians), and each column corresponds to a single unit.
-
-# %%
 # Let's plot the tuning curve of the first two neurons.
 
 fig, ax = plt.subplots(1, 2, figsize=(12, 4))
@@ -93,37 +128,48 @@ plt.tight_layout()
 
 # %%
 # Before using Nemos, let's explore the data at the population level.
-
+#
 # Let's plot the preferred heading
+#
+# <div class="notes">
+# - Let's visualize the data at the population level.
+# </div>
 fig = utils.plotting.plot_head_direction_tuning(
     tuning_curves, spikes, angle, threshold_hz=1, start=8910, end=8960
 )
 
 # %%
 # As we can see, the population activity tracks very well the current head-direction of the animal.
-# **Question : can we predict the spiking activity of each neuron based only on the activity of other neurons?**
-# @Guillaume: why do we expect that we can predict using activity only?, and why it is interesting?
-# maybe add reference to a paper
-
+# **Question : are neurons constantly tuned to head-direction and can we use it to predict the spiking activity of each neuron based only on the activity of other neurons?**
+# 
 # To fit the GLM faster, we will use only the first 3 min of wake
+#
+# <div class="notes">
+# - Take the first 3 minutes of wakefulness to speed up optimization
+# </div>
+
 wake_ep = nap.IntervalSet(
     start=wake_ep.loc[0, "start"], end=wake_ep.loc[0, "start"] + 3 * 60
 )
-# Filter the spikes with at least 1hz Rate
-
-
-# Compute the preferred angle
-pref_ang = tuning_curves.idxmax()
-# Throw away those neurons who had a low firing rate
-pref_ang = pref_ang[spikes.keys()]
 
 # %%
 # To use the GLM, we need first to bin the spike trains. Here we use pynapple
+# 
+# <div class="notes">
+# - bin the spike trains in 10 ms bin
+# </div>
 bin_size = 0.01
 count = spikes.count(bin_size, ep=wake_ep)
 
 # %%
 # Here we are going to rearrange neurons order based on their prefered directions.
+#
+# <div class="notes">
+# - sort the neurons by their preferred direction using pandas
+# </div>
+
+pref_ang = tuning_curves.idxmax()
+
 count = nap.TsdFrame(
     t=count.t,
     d=count.values[:, np.argsort(pref_ang.values)],
