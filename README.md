@@ -44,3 +44,9 @@ someone with Flatiron cluster access must:
 5. In your browser, go to `https://binder.flatironinstitute.org` and enter the
    username of whoever create the directory as the Owner and `nemos` as the
    project.
+
+NOTE: the inclusion of both `environment.yml` and `environment-cuda.yml` is
+because of an issue getting jax working with cuda in binder. With both files,
+`environment.yml` gets set up first, which installs conda, python, pip, and
+cuda, and then the first line in our `postBuild` will install
+`environment-cuda.yml` which installs all our dependencies (including jax).
