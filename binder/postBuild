@@ -2,6 +2,7 @@
 
 conda activate nemos
 cd nemos-workshop-feb-2024/
+python scripts/strip_text.py
 mkdocs build
 cd ..
 mkdir notebooks/
