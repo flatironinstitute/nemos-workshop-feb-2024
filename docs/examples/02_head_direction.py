@@ -165,7 +165,7 @@ count = spikes.count(bin_size, ep=wake_ep)
 # Here we are going to rearrange neurons order based on their prefered directions.
 #
 # <div class="notes">
-# - sort the neurons by their preferred direction
+# - sort the neurons by their preferred direction using pandas
 # </div>
 
 pref_ang = tuning_curves.idxmax()
