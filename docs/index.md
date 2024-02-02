@@ -12,4 +12,4 @@ The workshop will run from 9am to 5pm at the Flatiron Institute Center for Compu
 
 For this workshop, please bring your own laptop. We will be working in jupyter notebooks on a Flatiron-hosted [binder](https://mybinder.readthedocs.io/en/latest/index.html) instance. This means that you do not need to install or download anything to your personal machine; everything will be hosted on the Flatiron cluster and everyone should have access to a GPU.
 
-In the week before the workshop, please visit [the link to the binder instance](https://binder.flatironinstitute.org/~wbroderick/nemos) to see if you have access. You will have to log in with your google account (the one you registered with). If you get a 403 Forbidden error, make sure you selected the right google account and, if so, let Billy know.
+In the week before the workshop, please visit [the link to the binder instance](https://binder.flatironinstitute.org/~wbroderick/nemos?filepath=notebooks) to see if you have access. You will have to log in with your google account (the one you registered with). If you get a 403 Forbidden error, make sure you selected the right google account and, if so, let Billy know.
