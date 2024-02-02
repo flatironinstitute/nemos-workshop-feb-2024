@@ -10,7 +10,7 @@ jax
 jaxopt
 matplotlib
 dandi
-git+https://github.com/flatironinstitute/nemos.git
+git+https://github.com/flatironinstitute/nemos.git@pytree_convolve
 pytest
 click
 ipython
