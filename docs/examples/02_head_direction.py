@@ -553,7 +553,8 @@ predicted_firing_rate = nap.TsdFrame(t=count[window_size:].t, d=predicted_firing
 utils.plotting.plot_head_direction_tuning_model(tuning_curves, predicted_firing_rate, spikes, angle, threshold_hz=1,
                                                 start=8910, end=8960, cmap_label="hsv")
 # %%
-# Let's see if our firing rate predictions improved and in what sense,
+# Let's see if our firing rate predictions improved and in what sense.
+
 utils.plotting.plot_rates_and_smoothed_counts(
     neuron_count,
     {"Self-connection: raw history": rate_history,
@@ -570,10 +571,18 @@ responses = np.einsum("ijk, tk->ijt", weights, basis_kernels)
 print(responses.shape)
 
 # %%
+# Compute the tuning curve form the predicted rates
+
+tuning = nap.compute_1d_tuning_curves_continuous(predicted_firing_rate,
+                                                 feature=angle,
+                                                 nb_bins=61,
+                                                 minmax=(0, 2 * np.pi))
+
+# %%
 # Finally, we can visualize the pairwise interactions by plotting
 # all the coupling filters.
 
-utils.plotting.plot_coupling(responses)
+utils.plotting.plot_coupling(responses, tuning)
 
 
 # %%

@@ -666,8 +666,12 @@ def run_animation(counts: nap.Tsd, start: float):
     return HTML(anim.to_html5_video())
 
 
-def plot_coupling(responses, cmap_name="seismic",
-                      figsize=(10, 8), fontsize=15, alpha=0.5):
+def plot_coupling(responses, tuning, cmap_name="seismic",
+                      figsize=(10, 8), fontsize=15, alpha=0.5, cmap_label="hsv"):
+    pref_ang = tuning.idxmax()
+    cmap_tun = plt.get_cmap(cmap_label)
+    color_tun = (pref_ang.values - pref_ang.values.min()) / (pref_ang.values.max() - pref_ang.values.min())
+
     # plot heatmap
     sum_resp = np.sum(responses, axis=2)
     # normalize by cols (for fixed receiver neuron, scale all responses
@@ -680,7 +684,7 @@ def plot_coupling(responses, cmap_name="seismic",
     cmap = plt.get_cmap(cmap_name)
     n_row, n_col, n_tp = responses.shape
     time = np.arange(n_tp)
-    fig, axs = plt.subplots(n_row, n_col, figsize=figsize, sharey="row")
+    fig, axs = plt.subplots(n_row + 1, n_col + 1, figsize=figsize, sharey="row")
     for rec, rec_resp in enumerate(responses):
         for send, resp in enumerate(rec_resp):
             axs[rec, send].plot(time, responses[rec, send], color="k")
@@ -689,7 +693,37 @@ def plot_coupling(responses, cmap_name="seismic",
             axs[rec, send].set_xticks([])
             axs[rec, send].set_yticks([])
             axs[rec, send].axhline(0, color="k", lw=0.5)
+            if rec == n_row - 1:
+                axs[n_row, send].remove()  # Remove the original axis
+                axs[n_row, send] = fig.add_subplot(n_row, n_col, n_row * (n_col-1) + send + 1,
+                                                      polar=True)  # Add new polar axis
 
+                axs[n_row, send].fill_between(
+                    tuning.iloc[:, send].index,
+                    np.zeros(len(tuning)),
+                    tuning.iloc[:, send].values,
+                    color=cmap_tun(color_tun[send]),
+                    alpha=0.5,
+                )
+                axs[n_row, send].set_xticks([])
+                axs[n_row, send].set_yticks([])
+
+        axs[rec, send + 1].remove()  # Remove the original axis
+        axs[rec, send + 1] = fig.add_subplot(n_row, n_col, rec * n_col + send + 1, polar=True)  # Add new polar axis
+
+        axs[rec, send + 1].fill_between(
+            tuning.iloc[:, rec].index,
+            np.zeros(len(tuning)),
+            tuning.iloc[:, rec].values,
+            color=cmap_tun(color_tun[rec]),
+            alpha=0.5,
+        )
+        axs[rec, send + 1].set_xticks([])
+        axs[rec, send + 1].set_yticks([])
+    axs[rec + 1, send + 1].set_xticks([])
+    axs[rec + 1, send + 1].set_yticks([])
+    axs[rec + 1, send + 1].spines["left"].set_visible(False)
+    axs[rec + 1, send + 1].spines["bottom"].set_visible(False)
     for rec, rec_resp in enumerate(responses):
         for send, resp in enumerate(rec_resp):
             xlim = axs[rec, send].get_xlim()
@@ -706,10 +740,10 @@ def plot_coupling(responses, cmap_name="seismic",
             axs[rec, send].set_xlim(xlim)
             axs[rec, send].set_ylim(ylim)
     axs[n_row // 2, 0].set_ylabel("receiver\n", fontsize=fontsize)
-    axs[n_row - 1, n_col // 2].set_xlabel("\nsender", fontsize=fontsize)
+    axs[n_row, n_col // 2].set_xlabel("\nsender", fontsize=fontsize)
 
     plt.suptitle("Pairwise Interaction", fontsize=fontsize)
-
+    return fig
 
 def plot_history_window(neuron_count, interval, window_size_sec):
     bin_size = 1 / neuron_count.rate
