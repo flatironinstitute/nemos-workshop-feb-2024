@@ -504,7 +504,7 @@ workshop_utils.plotting.plot_weighted_sum_basis(time, model.coef_, basis_kernels
 # - Convolve the counts with the basis functions.
 # </div>
 
-conv_spk = nmo.utils.convolve_1d_trials(basis_kernels, [neuron_count[:, None]])[0]
+conv_spk = nmo.utils.convolve_1d_trials(basis_kernels, np.expand_dims(neuron_count, 1))
 conv_spk = nap.TsdFrame(t=count[window_size:].t, d=np.asarray(conv_spk[:-1, 0]))
 
 print(f"Raw count history as feature: {input_feature.shape}")
