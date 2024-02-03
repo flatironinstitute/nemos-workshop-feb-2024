@@ -12,8 +12,7 @@ someone with Flatiron cluster access must:
 
 1. Create a directory at `~/public_binder/nemos` (the last directory will be the
    name of the environment).
-2. Create a `data/` folder within that directory.
-2. Create a `.public_binder` file with the following contents (this is a yaml file):
+2. Create a `.public_binder` file with the following contents (note that this is a yaml file):
    ```
    gpu: true
    mem_guarantee: 20G
@@ -27,26 +26,36 @@ someone with Flatiron cluster access must:
    *at most* the limit. In practice, your total number of users multiplied by
    the **limit** should all fit on a single node. Talk with SCC to get a sense
    for the numbers on this, you may need to tweak the above numbers, which
-   should work for 18 users on a single GPU node (with 750GB memory and 96
-   cores).
+   should work for 18 users on a single GPU node (for this workshop, we have one
+   with 750GB memory and 96 cores). See the wiki page linked above for details,
+   you may need to talk some with SCC.
    
 3. Add `users:` with a list of email addresses for your users. Each user will
    have to login with this google account to gain access.
    
-4. Clone this repo into your `~/public_binder/nemos` directory and symlink the
-   contents of the `binder/` directory:
+4. Clone this workshop repo into your `~/public_binder/nemos` directory and
+   symlink the contents of the `binder/` directory:
    
    ```bash
+   cd ~/public_binder/nemos
    git clone git@github.com:flatironinstitute/nemos-workshop-feb-2024.git
    ln -sv nemos-workshop-feb-2024/binder/* .
    ```
 
 5. In your browser, go to `https://binder.flatironinstitute.org` and enter the
-   username of whoever create the directory as the Owner and `nemos` as the
-   project.
+   username of whoever create the directory as the owner, `nemos` as the
+   project, and `notebooks/` as the path. This is equivalent to going to
+   `https://binder.flatironinstitute.org/~USER/nemos` (I can't figure out how to
+   get the path in the url).
 
 NOTE: the inclusion of both `environment.yml` and `environment-cuda.yml` is
 because of an issue getting jax working with cuda in binder. With both files,
 `environment.yml` gets set up first, which installs conda, python, pip, and
 cuda, and then the first line in our `postBuild` will install
 `environment-cuda.yml` which installs all our dependencies (including jax).
+
+In order to install the requirements listed in this repository, we had to
+structure it as a installable library. That is, we needed to include a
+`pyproject.toml` and put our code within `src/` and everything, so that pip
+knows how to install it when passed
+`git+https://github.com/flatironinstitute/nemos-workshop-feb-2024.git`
