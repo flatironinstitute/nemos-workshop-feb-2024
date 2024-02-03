@@ -105,9 +105,9 @@ plt.tight_layout()
 # ## NEMOS {.strip-code}
 # It's time to use nemos. 
 # Let's try to predict the spikes as a function of position and see if we can generate better tuning curves
-# First we start by binning the spike trains in 5 ms bins.
+# First we start by binning the spike trains in 10 ms bins.
 
-bin_size = 0.005 # second
+bin_size = 0.01 # second
 counts = spikes.count(bin_size, ep=position.time_support)
 
 # %%
@@ -175,18 +175,18 @@ plt.tight_layout()
 
 # %%
 # Now we can fit the GLM and see what we get. In this case, we use Ridge for regularization.
-model = nmo.glm.GLM(
-    #regularizer=nmo.regularizer.Lasso(regularizer_strength=1e-3)
-    )
+# Here we will focus on the last neuron (neuron 7) who has a nice grid pattern
 
+model = utils.model.GLM(regularizer=nmo.regularizer.UnRegularized("LBFGS"))
 
+neuron = 2
 
 # %%
 # Let's fit the model
 
-position_basis = np.repeat(np.expand_dims(position_basis, 1), len(spikes), 1)
+# position_basis = np.repeat(np.expand_dims(position_basis, 1), len(spikes), 1)
 
-model.fit(position_basis, counts)
+model.fit(position_basis, counts[:,neuron])
 
 
 # %%
@@ -196,7 +196,7 @@ rate_pos = model.predict(position_basis)
 
 # %%
 # Let's go back to pynapple
-rate_pos = nap.TsdFrame(t=counts.t, d=np.asarray(rate_pos))
+rate_pos = nap.TsdFrame(t=counts.t, d=np.asarray(rate_pos), columns = [neuron])
 
 # %%
 # And compute a tuning curves again
@@ -211,33 +211,30 @@ model_tuning, binsxy = nap.compute_2d_tuning_curves_continuous(
 # Let's compare tuning curves
 
 fig = plt.figure(figsize = (12, 4))
-gs = plt.GridSpec(2, len(spikes))
-for i in range(len(spikes)):
-    ax = plt.subplot(gs[0, i])
-    ax.imshow(gaussian_filter(pos_tuning[i], sigma=1))
-    
-    ax = plt.subplot(gs[1, i])
-    ax.imshow(model_tuning[i])
+gs = plt.GridSpec(1, 2)
+ax = plt.subplot(gs[0, 0])
+ax.imshow(gaussian_filter(pos_tuning[neuron], sigma=1))
+ax = plt.subplot(gs[0, 1])
+ax.imshow(gaussian_filter(model_tuning[neuron], sigma=1))
 plt.tight_layout()
 
 
 # %%
-# What is the score of the model?
-L_model = model.score(position_basis, rate_pos)
-
-print("log-likelihood = ", L_model)
-
-# %%
 # It's already very good. Can we improve it by adding regularization?
 # We can cross-validate with scikit-learn
-model = nmo.glm.GLM(
-    regularizer=nmo.regularizer.Lasso(regularizer_strength=1e-3)
+# We start by creating a new model with Ridge regularization. We will find the best 
+# regularization strenght with scikit-learn
+# 
+model = utils.model.GLM(
+        regularizer=nmo.regularizer.Ridge(regularizer_strength=0.1, solver_name="LBFGS")
     )
 
 from sklearn.model_selection import GridSearchCV
 param_grid = dict(regularizer__regularizer_strength=[0.0, 1e-6, 1e-3])
+
 cls = GridSearchCV(model, param_grid=param_grid)
-cls.fit(position_basis, counts)
+
+cls.fit(position_basis, counts[:,neuron])
 
 # %%
 # Let's get the best estimator and see what we get
@@ -247,7 +244,7 @@ best_model = cls.best_estimator_
 # %%
 # Let's predict and compute new tuning curves
 best_rate_pos = best_model.predict(position_basis)
-best_rate_pos = nap.TsdFrame(t=counts.t, d=np.asarray(best_rate_pos))
+best_rate_pos = nap.TsdFrame(t=counts.t, d=np.asarray(best_rate_pos), columns=[neuron])
 
 best_model_tuning, binsxy = nap.compute_2d_tuning_curves_continuous(
     tsdframe=best_rate_pos,
@@ -258,19 +255,14 @@ best_model_tuning, binsxy = nap.compute_2d_tuning_curves_continuous(
 # %%
 # Let's predict and compute new tuning curves
 fig = plt.figure(figsize = (12, 4))
-gs = plt.GridSpec(3, len(spikes))
-for i in range(len(spikes)):
-    ax = plt.subplot(gs[0,i])
-    ax.imshow(gaussian_filter(pos_tuning[i], sigma=1))
-    
-    ax = plt.subplot(gs[1,i])
-    ax.imshow(model_tuning[i])
-
-    ax = plt.subplot(gs[2,i])
-    ax.imshow(best_model_tuning[i])
-
+gs = plt.GridSpec(1, 3)
+ax = plt.subplot(gs[0, 0])
+ax.imshow(gaussian_filter(pos_tuning[neuron], sigma=1))
+ax = plt.subplot(gs[0, 1])
+ax.imshow(gaussian_filter(model_tuning[neuron], sigma=1))
+ax = plt.subplot(gs[0, 2])
+ax.imshow(gaussian_filter(best_model_tuning[neuron], sigma=1))
 plt.tight_layout()
-plt.show()
 
 
 
