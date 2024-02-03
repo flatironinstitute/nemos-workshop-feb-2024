@@ -1,6 +1,8 @@
 #!/bin/bash
 
+CONDA_OVERRIDE_CUDA="11.8" conda env update -p $NB_PYTHON_PREFIX --file environment-cuda.yml
 conda activate nemos
+conda clean --all -y
 cd nemos-workshop-feb-2024/
 python scripts/strip_text.py
 python src/workshop_utils/data.py ../data/

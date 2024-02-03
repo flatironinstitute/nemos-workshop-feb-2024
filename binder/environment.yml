@@ -9,7 +9,3 @@ dependencies:
   - cudnn
   - python=3.10
   - cuda-python
-  - jax
-  - cuda-nvcc
-  - pip:
-      - git+https://github.com/flatironinstitute/nemos-workshop-feb-2024.git@binder
