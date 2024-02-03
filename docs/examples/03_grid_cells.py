@@ -18,9 +18,7 @@ import pynapple as nap
 import nemos as nmo
 from scipy.ndimage import gaussian_filter
 
-import sys
-sys.path.append('..')
-import utils
+import workshop_utils
 
 jax.config.update("jax_enable_x64", True)
 
@@ -31,7 +29,7 @@ jax.config.update("jax_enable_x64", True)
 # blblalba say more
 # Just run this cell
 
-io = utils.data.download_dandi_data("000582", "sub-11265/sub-11265_ses-07020602_behavior+ecephys.nwb",
+io = workshop_utils.data.download_dandi_data("000582", "sub-11265/sub-11265_ses-07020602_behavior+ecephys.nwb",
 )
 
 # %%
@@ -176,7 +174,7 @@ plt.tight_layout()
 # Now we can fit the GLM and see what we get. In this case, we use Ridge for regularization.
 # Here we will focus on the last neuron (neuron 7) who has a nice grid pattern
 
-model = utils.model.GLM(regularizer=nmo.regularizer.UnRegularized("LBFGS"))
+model = workshop_utils.model.GLM(regularizer=nmo.regularizer.UnRegularized("LBFGS"))
 
 neuron = 2
 
@@ -224,7 +222,7 @@ plt.tight_layout()
 # We start by creating a new model with Ridge regularization. We will find the best 
 # regularization strenght with scikit-learn
 # 
-model = utils.model.GLM(
+model = workshop_utils.model.GLM(
         regularizer=nmo.regularizer.Ridge(regularizer_strength=0.1, solver_name="LBFGS")
     )
 
