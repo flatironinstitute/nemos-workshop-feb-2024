@@ -298,7 +298,6 @@ plt.tight_layout()
 # <div class="notes">
 #   - find the best `regularizer_strength` using `sklearn.model_selection.GriSearchCV`
 # </div>
->>>>>>> 6e8107f7bb40d6af36f0d16775a0dabe94fe7ad8
 from sklearn.model_selection import GridSearchCV
 param_grid = dict(regularizer__regularizer_strength=[1e-6, 1e-3, 1.0])
 
