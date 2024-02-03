@@ -8,7 +8,6 @@
 
 import math
 import os
-import sys
 from typing import Optional
 
 import jax
@@ -19,9 +18,7 @@ import pynapple as nap
 import nemos as nmo
 from scipy.ndimage import gaussian_filter
 
-import sys
-sys.path.append('..')
-import utils
+import workshop_utils
 
 jax.config.update("jax_enable_x64", True)
 
@@ -34,7 +31,7 @@ jax.config.update("jax_enable_x64", True)
 #   - Stream the data
 # </div>
 
-io = utils.data.download_dandi_data("000582", "sub-11265/sub-11265_ses-07020602_behavior+ecephys.nwb",
+io = workshop_utils.data.download_dandi_data("000582", "sub-11265/sub-11265_ses-07020602_behavior+ecephys.nwb",
 )
 
 # %%
@@ -237,8 +234,7 @@ plt.tight_layout()
 #   - set `regularizer_strength=1.0`
 # </div>
 
-
-model = utils.model.GLM(
+model = workshop_utils.model.GLM(
         regularizer=nmo.regularizer.Ridge(regularizer_strength=1.0, solver_name="LBFGS")
     )
 

@@ -97,14 +97,12 @@ that our model can make:
 
 # first import things
 import numpy as np
-import sys
-sys.path.append('..')
-import utils
+import workshop_utils
 import pynapple as nap
 import matplotlib.pyplot as plt
 
 # configure plots some
-plt.style.use('../utils/nemos.mplstyle')
+plt.style.use(workshop_utils.STYLE_FILE)
 
 # %%
 # to make this plot work well, keep this to three values
@@ -116,8 +114,8 @@ input_feature[50:] = 1
 input_feature *= np.random.rand(100)
 input_feature =  nap.Tsd(np.linspace(0, 100, 100), input_feature)
 
-fig = utils.plotting.lnp_schematic(input_feature,
-                                   weights, intercepts)
+fig = workshop_utils.plotting.lnp_schematic(input_feature,
+                                            weights, intercepts)
 
 # %%
 #
@@ -132,7 +130,7 @@ fig = utils.plotting.lnp_schematic(input_feature,
 # have to be non-negative! That's what the nonlinearity handles: making sure our
 # firing rate is always positive:
 
-fig = utils.plotting.lnp_schematic(input_feature,
+fig = workshop_utils.plotting.lnp_schematic(input_feature,
                                    weights, intercepts,
                                    plot_nonlinear=True)
 
@@ -154,7 +152,7 @@ fig = utils.plotting.lnp_schematic(input_feature,
 #
 # Now we're ready to see what these spikes look like!
 
-fig = utils.plotting.lnp_schematic(input_feature,
+fig = workshop_utils.plotting.lnp_schematic(input_feature,
                                    weights, intercepts,
                                    plot_nonlinear=True, plot_spikes=True)
 

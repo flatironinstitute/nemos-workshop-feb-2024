@@ -15,7 +15,8 @@ build:
     pre_build:
       - python scripts/strip_text.py
       # download data first, so we don't have a race for each notebook
-      - python docs/utils/data.py
+      - mkdir -p docs/data
+      - python src/workshop_utils/data.py docs/data
   apt_packages:
     - ffmpeg
 
@@ -33,4 +34,5 @@ mkdocs:
 # Optionally declare the Python requirements required to build your docs
 python:
    install:
-   - requirements: requirements.txt
+   - method: pip
+     path: .

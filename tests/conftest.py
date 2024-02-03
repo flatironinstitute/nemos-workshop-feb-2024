@@ -2,11 +2,8 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 import pytest
-import sys, os
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'docs', 'examples', 'utils')))
-
-from model import GLM
+from workshop_utils.model import GLM
 import nemos as nmo
 
 

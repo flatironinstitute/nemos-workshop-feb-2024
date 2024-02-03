@@ -2,7 +2,7 @@
 #
 """# Fit V1 cell
 
-## Learning objectives
+## Learning objectives {.keep-text}
 
  - Learn how to combine GLM with other modeling approach.
  - Review previous tutorials.
@@ -18,13 +18,12 @@ import numpy as np
 import pynapple as nap
 import requests
 import tqdm
-import sys
-sys.path.append('..')
-import utils
-plt.style.use('../utils/nemos.mplstyle')
+import workshop_utils
 
 # required for second order methods (BFGS, Newton-CG)
 jax.config.update("jax_enable_x64", True)
+# configure plots some
+plt.style.use(workshop_utils.STYLE_FILE)
 
 # %%
 # ## Data Streaming
@@ -32,7 +31,8 @@ jax.config.update("jax_enable_x64", True)
 # Here we load the data from OSF. This data comes from Sonica Saraf, in Tony
 # Movshon's lab.
 
-path = utils.data.download_data("m691l1.nwb", "https://osf.io/xesdm/download")
+path = workshop_utils.data.download_data("m691l1.nwb", "https://osf.io/xesdm/download",
+                                         '../data')
 
 
 # %%
@@ -233,7 +233,7 @@ print(filtered_stimulus[:5])
 # as time 0. At time 0.0015? Same thing, up until we pass time 0.025017. Thus,
 # we want to "fill forward" the values of our input, and we have pynapple
 # convenience function to do so:
-filtered_stimulus = utils.data.fill_forward(counts, filtered_stimulus)
+filtered_stimulus = workshop_utils.data.fill_forward(counts, filtered_stimulus)
 filtered_stimulus
 
 # %%
@@ -274,7 +274,7 @@ counts = counts[:, 0]
 # <div class="notes">
 #   - Fit the GLM
 # </div>
-model = utils.model.GLM(regularizer=nmo.regularizer.UnRegularized(solver_name="LBFGS"))
+model = workshop_utils.model.GLM(regularizer=nmo.regularizer.UnRegularized(solver_name="LBFGS"))
 model.fit(convolved_input, counts)
 
 # %%
