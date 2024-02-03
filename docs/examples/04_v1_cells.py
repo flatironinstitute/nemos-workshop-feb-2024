@@ -2,7 +2,7 @@
 #
 """# Fit V1 cell
 
-## Learning objectives
+## Learning objectives {.keep-text}
 
  - Learn how to combine GLM with other modeling approach.
  - Review previous tutorials.
