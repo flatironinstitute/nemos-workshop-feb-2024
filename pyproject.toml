@@ -43,6 +43,7 @@ dependencies = [
     'pytest',
     'click',
     'ipython',
+    'scikit-learn',
 ]
 
 # Configure package discovery for setuptools
