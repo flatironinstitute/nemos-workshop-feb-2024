@@ -3,7 +3,6 @@ channels:
   - conda-forge
   - nvidia
 dependencies:
-  - ffmpeg
   - pip
   - cudatoolkit
   - cudnn

@@ -3,6 +3,7 @@ channels:
   - conda-forge
   - nvidia
 dependencies:
+  - ffmpeg
   - jax
   - jaxlib=*=*cuda*
   - cuda-nvcc
