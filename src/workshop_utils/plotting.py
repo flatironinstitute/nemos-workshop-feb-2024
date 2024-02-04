@@ -696,8 +696,9 @@ def plot_coupling(responses, tuning, cmap_name="seismic",
             axs[rec, send].axhline(0, color="k", lw=0.5)
             if rec == n_row - 1:
                 axs[n_row, send].remove()  # Remove the original axis
-                axs[n_row, send] = fig.add_subplot(n_row, n_col, n_row * (n_col-1) + send + 1,
-                                                      polar=True)  # Add new polar axis
+                axs[n_row, send] = fig.add_subplot(n_row+1, n_col+1,
+                                                   np.ravel_multi_index((n_row, send+1),(n_row + 1, n_col+1)),
+                                                   polar=True)  # Add new polar axis
 
                 axs[n_row, send].fill_between(
                     tuning.iloc[:, send].index,
@@ -710,7 +711,8 @@ def plot_coupling(responses, tuning, cmap_name="seismic",
                 axs[n_row, send].set_yticks([])
 
         axs[rec, send + 1].remove()  # Remove the original axis
-        axs[rec, send + 1] = fig.add_subplot(n_row, n_col, rec * n_col + send + 1, polar=True)  # Add new polar axis
+        axs[rec, send + 1] = fig.add_subplot(n_row+1, n_col+1,
+                                             np.ravel_multi_index((rec, send+1),(n_row+1, n_col+1)) + 1, polar=True)  # Add new polar axis
 
         axs[rec, send + 1].fill_between(
             tuning.iloc[:, rec].index,
@@ -745,6 +747,7 @@ def plot_coupling(responses, tuning, cmap_name="seismic",
 
     plt.suptitle("Pairwise Interaction", fontsize=fontsize)
     return fig
+
 
 def plot_history_window(neuron_count, interval, window_size_sec):
     bin_size = 1 / neuron_count.rate
