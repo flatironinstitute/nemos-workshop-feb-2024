@@ -31,7 +31,11 @@ someone with Flatiron cluster access must:
    you may need to talk some with SCC.
    
 3. Add `users:` with a list of email addresses for your users. Each user will
-   have to login with this google account to gain access.
+   have to login with this google account to gain access. NOTE: this has to be
+   the email address that people *use to login*, i.e., aliases are not allowed.
+   In particular, this means that NYU email addresses should be their netID form
+   (e.g., fl123@nyu.edu), not the expanded one (e.g.,
+   firstnamelastname@nyu.edu).
    
 4. Clone this workshop repo into your `~/public_binder/nemos` directory and
    symlink the contents of the `binder/` directory:
