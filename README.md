@@ -58,6 +58,12 @@ because of an issue getting jax working with cuda in binder. With both files,
 cuda, and then the first line in our `postBuild` will install
 `environment-cuda.yml` which installs all our dependencies (including jax).
 
+If you need to force the container to rebuild, because you modified the
+requirements or the contents of `binder/`, touch the directory on the cluster:
+`touch ~/public_binder/nemos` (because of the symlinking done above, binder
+won't realize that the contents of the symlinked files have changed unless this
+step is taken).
+
 In order to install the requirements listed in this repository, we had to
 structure it as a installable library. That is, we needed to include a
 `pyproject.toml` and put our code within `src/` and everything, so that pip
