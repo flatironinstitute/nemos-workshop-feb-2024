@@ -39,7 +39,7 @@ dependencies = [
     'jaxopt',
     'matplotlib',
     'dandi',
-    'nemos @ git+https://github.com/flatironinstitute/nemos.git@pytree_convolve',
+    'nemos @ git+https://github.com/flatironinstitute/nemos.git',
     'pytest',
     'click',
     'ipython',
