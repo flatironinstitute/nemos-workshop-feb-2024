@@ -60,9 +60,8 @@ cuda, and then the first line in our `postBuild` will install
 
 If you need to force the container to rebuild, because you modified the
 requirements or the contents of `binder/`, touch the directory on the cluster:
-`touch ~/public_binder/nemos` (because of the symlinking done above, binder
-won't realize that the contents of the symlinked files have changed unless this
-step is taken).
+`touch ~/public_binder/nemos` (see
+[wiki](https://wiki.flatironinstitute.org/SCC/BinderHub#Updating_environments)).
 
 In order to install the requirements listed in this repository, we had to
 structure it as a installable library. That is, we needed to include a
