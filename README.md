@@ -45,6 +45,14 @@ someone with Flatiron cluster access must:
    git clone git@github.com:flatironinstitute/nemos-workshop-feb-2024.git
    ln -sv nemos-workshop-feb-2024/binder/* .
    ```
+   
+   One note here! For our [FENS 2024
+   workshop](https://github.com/flatironinstitute/ccn-software-fens-2024), I
+   realized that this symlink doesn't work for the `start` script, which may be
+   useful for, e.g., setting environmental variables that tell `pooch` where to
+   download data. In that case, you must copy the actual start file: `cp
+   ccn-software-fens-2024/binder/start .` See the FENS workshop repo for an
+   example.
 
 5. In your browser, go to `https://binder.flatironinstitute.org` and enter the
    username of whoever create the directory as the owner, `nemos` as the
