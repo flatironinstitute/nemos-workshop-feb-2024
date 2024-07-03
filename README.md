@@ -43,6 +43,7 @@ someone with Flatiron cluster access must:
    ```bash
    cd ~/public_binder/nemos
    git clone git@github.com:flatironinstitute/nemos-workshop-feb-2024.git
+   # note this must be relative paths! not absolute!
    ln -sv nemos-workshop-feb-2024/binder/* .
    ```
    
